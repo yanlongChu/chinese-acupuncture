@@ -22,6 +22,7 @@ const { Header, Content, Sider } = Layout;
 function App() {
   const [selectedMenu, setSelectedMenu] = useState('qa');
   const [modelScene, setModelScene] = useState(null);
+  const [modelTransform, setModelTransform] = useState(null);
   const [loadProgress, setLoadProgress] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const {
@@ -52,9 +53,21 @@ function App() {
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
         const scale = 2.5 / maxDim;
+        const offset = new THREE.Vector3(
+          -center.x * scale,
+          -center.y * scale + 0.5,
+          -center.z * scale
+        );
         loadedScene.scale.set(scale, scale, scale);
-        loadedScene.position.set(-center.x * scale, -center.y * scale + 0.5, -center.z * scale);
+        loadedScene.position.copy(offset);
         setModelScene(loadedScene);
+        // 把原始包围盒中心和尺寸也传下去，穴位坐标据此对齐
+        setModelTransform({
+          scale,
+          offset: { x: offset.x, y: offset.y, z: offset.z },
+          modelCenter: { x: center.x, y: center.y, z: center.z },
+          modelSize: { x: size.x, y: size.y, z: size.z },
+        });
         setLoadProgress(100);
       },
       (xhr) => {
@@ -111,7 +124,7 @@ function App() {
           <QASystem />
         </div>
         <div style={{ display: selectedMenu === 'visualization' ? 'block' : 'none' }}>
-          <AcupointVisualization preloadedScene={modelScene} />
+          <AcupointVisualization preloadedScene={modelScene} modelTransform={modelTransform} />
         </div>
         <div style={{ display: selectedMenu === 'knowledge' ? 'block' : 'none' }}>
           <KnowledgeBase />
