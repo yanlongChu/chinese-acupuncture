@@ -52,7 +52,7 @@ const KnowledgeBase = () => {
   const [basicFilterForm] = Form.useForm();
   const [compatFilterForm] = Form.useForm();
   const [techFilterForm] = Form.useForm();
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
   // 获取当前列表
   const getCurrentList = () => {
@@ -149,12 +149,13 @@ const KnowledgeBase = () => {
     form.validateFields().then(values => {
       const now = new Date().toISOString().split('T')[0];
       const list = getCurrentList();
+      const isCompat = activeTab === 'compat';
 
       if (currentRecord) {
         const updated = list.map(item =>
-          item.code === currentRecord.code
-            ? { ...item, ...values, updateTime: now }
-            : item
+          isCompat
+            ? (item.id === currentRecord.id ? { ...item, ...values, updateTime: now } : item)
+            : (item.code === currentRecord.code ? { ...item, ...values, updateTime: now } : item)
         );
         setCurrentList(updated);
         setCurrentFiltered(updated);
@@ -643,7 +644,9 @@ const KnowledgeBase = () => {
         <Col xs={12} sm={6}>
           <Card size="small" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff' }}>
-              {new Set(getCurrentList().map(a => a.meridian)).size}
+              {activeTab === 'compat'
+                ? new Set(getCurrentList().map(a => a.diseaseCategory)).size
+                : new Set(getCurrentList().map(a => a.meridian)).size}
             </div>
             <div style={{ fontSize: 12, color: '#999' }}>分类数</div>
           </Card>
@@ -659,9 +662,7 @@ const KnowledgeBase = () => {
           ...pagination,
           total: currentFiltered.length,
           showTotal: (total) => `共 ${total} 条记录`,
-          showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          showQuickJumper: true,
+          showSizeChanger: false,
           onChange: (page, pageSize) => setPagination({ current: page, pageSize })
         }}
         scroll={{ x: 1300 }}
@@ -683,29 +684,91 @@ const KnowledgeBase = () => {
         cancelText="取消"
       >
         <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
-                <Input placeholder="请输入名称" />
+          {activeTab === 'basic' && (
+            <>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+                    <Input placeholder="请输入名称" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="pinyin" label="拼音" rules={[{ required: true, message: '请输入拼音' }]}>
+                    <Input placeholder="请输入拼音" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="code" label="编码" rules={[{ required: true, message: '请输入编码' }]}>
+                    <Input placeholder="请输入编码" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item name="meridian" label="归经" rules={[{ required: true, message: '请选择归经' }]}>
+                <Select placeholder="请选择归经" options={getCategoryOptions()} />
               </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="pinyin" label="拼音" rules={[{ required: true, message: '请输入拼音' }]}>
-                <Input placeholder="请输入拼音" />
+              <Form.Item name="location" label="定位" rules={[{ required: true, message: '请输入定位' }]}>
+                <TextArea rows={3} placeholder="请输入穴位解剖定位" />
               </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="code" label="编码" rules={[{ required: true, message: '请输入编码' }]}>
-                <Input placeholder="请输入编码" />
+            </>
+          )}
+
+          {activeTab === 'compat' && (
+            <>
+              <Form.Item name="symptom" label="对症" rules={[{ required: true, message: '请输入适应症' }]}>
+                <Input placeholder="请输入适应症，如：风寒外感头痛" />
               </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="meridian" label="归经 / 分类" rules={[{ required: true, message: '请选择分类' }]}>
-            <Select placeholder="请选择分类" options={getCategoryOptions()} />
-          </Form.Item>
-          <Form.Item name="location" label="定位 / 内容" rules={[{ required: true, message: '请输入内容' }]}>
-            <TextArea rows={3} placeholder="请输入定位或内容描述" />
-          </Form.Item>
+              <Form.Item name="acupoints" label="穴位配伍" rules={[{ required: true, message: '请输入穴位组合' }]}>
+                <TextArea rows={2} placeholder="请输入推荐穴位组合" />
+              </Form.Item>
+              <Form.Item name="needlingOrder" label="针刺顺序" rules={[{ required: true, message: '请输入针刺顺序' }]}>
+                <TextArea rows={2} placeholder="请输入针刺先后顺序" />
+              </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="treatmentCourse" label="疗程" rules={[{ required: true, message: '请输入疗程' }]}>
+                    <Input placeholder="如：每日1次，5-7天为1疗程" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="source" label="信息出处" rules={[{ required: true, message: '请输入文献出处' }]}>
+                    <Input placeholder="如：《针灸甲乙经》" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item name="diseaseCategory" label="病症分类" rules={[{ required: true, message: '请选择病症分类' }]}>
+                <Select placeholder="请选择病症分类" options={getCategoryOptions()} />
+              </Form.Item>
+            </>
+          )}
+
+          {activeTab === 'tech' && (
+            <>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+                    <Input placeholder="请输入技法名称" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="pinyin" label="拼音" rules={[{ required: true, message: '请输入拼音' }]}>
+                    <Input placeholder="请输入拼音" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="code" label="编码" rules={[{ required: true, message: '请输入编码' }]}>
+                    <Input placeholder="请输入编码" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item name="meridian" label="技法分类" rules={[{ required: true, message: '请选择技法分类' }]}>
+                <Select placeholder="请选择技法分类" options={getCategoryOptions()} />
+              </Form.Item>
+              <Form.Item name="location" label="内容" rules={[{ required: true, message: '请输入内容描述' }]}>
+                <TextArea rows={3} placeholder="请输入技法详细描述" />
+              </Form.Item>
+            </>
+          )}
+
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="dangerLevel" label="危险等级" rules={[{ required: true, message: '请选择危险等级' }]}>
