@@ -14,6 +14,7 @@ import QASystem from './pages/QASystem';
 import AcupointVisualization from './pages/AcupointVisualization';
 import KnowledgeBase from './pages/KnowledgeBase';
 import Dashboard from './pages/Dashboard';
+import ShichenTip from './pages/ShichenTip';
 import './App.css';
 
 const { Header, Content, Sider } = Layout;
@@ -159,6 +160,8 @@ function App() {
           style={{
             background: colorBgContainer,
             boxShadow: '2px 0 8px rgba(0,0,0,0.05)',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
           <Menu
@@ -166,8 +169,9 @@ function App() {
             selectedKeys={[selectedMenu]}
             onClick={({ key }) => setSelectedMenu(key)}
             items={menuItems}
-            style={{ height: '100%', borderRight: 0, paddingTop: 16 }}
+            style={{ height: '55%', borderRight: 0, paddingTop: 16 }}
           />
+          <ShichenTip />
         </Sider>
         <Layout style={{ padding: '24px' }}>
           <Content
