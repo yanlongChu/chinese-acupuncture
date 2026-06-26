@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Layout, Menu, theme, Progress } from 'antd';
+import { Layout, Menu, theme, Progress, ConfigProvider } from 'antd';
 import {
   MessageOutlined,
   ScanOutlined,
   BookOutlined,
   HomeOutlined,
   MedicineBoxOutlined,
-  LoadingOutlined
 } from '@ant-design/icons';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -24,12 +23,10 @@ function App() {
   const [modelScene, setModelScene] = useState(null);
   const [modelTransform, setModelTransform] = useState(null);
   const [loadProgress, setLoadProgress] = useState(null);
-  const [loadError, setLoadError] = useState(null);
   const {
-    token: { colorBgContainer, borderRadiusLG },
+    token: { borderRadiusLG },
   } = theme.useToken();
 
-  // 预加载3D模型
   useEffect(() => {
     let cancelled = false;
     const loader = new GLTFLoader();
@@ -42,9 +39,9 @@ function App() {
         loadedScene.traverse((child) => {
           if (child.isMesh) {
             child.material = new THREE.MeshStandardMaterial({
-              color: '#d4a574',
-              roughness: 0.7,
-              metalness: 0.1,
+              color: '#E8DED1',
+              roughness: 0.85,
+              metalness: 0.05,
             });
           }
         });
@@ -61,7 +58,6 @@ function App() {
         loadedScene.scale.set(scale, scale, scale);
         loadedScene.position.copy(offset);
         setModelScene(loadedScene);
-        // 把原始包围盒中心和尺寸也传下去，穴位坐标据此对齐
         setModelTransform({
           scale,
           offset: { x: offset.x, y: offset.y, z: offset.z },
@@ -89,30 +85,24 @@ function App() {
     {
       key: 'dashboard',
       icon: <HomeOutlined />,
-      label: '系统首页',
+      label: '总览',
     },
     {
       key: 'qa',
       icon: <MessageOutlined />,
-      label: '中医针灸问答',
+      label: '智能问答',
     },
     {
       key: 'visualization',
       icon: <ScanOutlined />,
-      label: '人体3D穴位',
+      label: '3D 穴位',
     },
     {
       key: 'knowledge',
       icon: <BookOutlined />,
-      label: '知识库管理',
+      label: '知识库',
     },
   ];
-
-  const formatBytes = (bytes) => {
-    if (bytes > 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    if (bytes > 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return bytes + ' B';
-  };
 
   const renderContent = () => {
     return (
@@ -134,74 +124,110 @@ function App() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        }}
-      >
-        <div style={{ 
-          color: 'white', 
-          fontSize: '20px', 
-          fontWeight: 'bold',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
-        }}>
-          <MedicineBoxOutlined style={{ fontSize: '24px' }} />
-          中医针灸智能知识问答系统
-        </div>
-        {/* 模型预加载进度条 */}
-        {loadProgress !== null && loadProgress < 100 && (
-          <div style={{ marginLeft: 'auto', width: 200, color: 'white' }}>
-            <div style={{ fontSize: 12, marginBottom: 4 }}>3D模型加载中 {loadProgress}%</div>
-            <Progress percent={loadProgress} size="small" strokeColor="#fff" showInfo={false} />
-          </div>
-        )}
-        {modelScene && (
-          <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>
-            3D模型已就绪
-          </div>
-        )}
-      </Header>
-      <Layout>
-        <Sider
-          width={220}
-          style={{
-            background: colorBgContainer,
-            boxShadow: '2px 0 8px rgba(0,0,0,0.05)',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#1F6F52',
+          colorInfo: '#1F6F52',
+          colorSuccess: '#5BAF7D',
+          colorWarning: '#C58B54',
+          colorError: '#C95A4A',
+          colorBgContainer: '#ffffff',
+          colorBgLayout: '#FAFAF8',
+          colorText: '#1f2937',
+          colorTextSecondary: '#8a8f89',
+          colorBorder: '#D5D8D3',
+          borderRadius: 12,
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif",
+        },
+      }}
+    >
+      <Layout style={{ minHeight: '100vh', background: '#FAFAF8' }}>
+        <Header
+          className="app-header"
+          style={{ borderBottom: '1px solid #EEF0ED', boxShadow: 'none' }}
         >
-          <Menu
-            mode="inline"
-            selectedKeys={[selectedMenu]}
-            onClick={({ key }) => setSelectedMenu(key)}
-            items={menuItems}
-            style={{ height: '55%', borderRight: 0, paddingTop: 16 }}
-          />
-          <ShichenTip />
-        </Sider>
-        <Layout style={{ padding: '24px' }}>
-          <Content
+          <div className="app-title">
+            <span className="app-title-icon">
+              <MedicineBoxOutlined />
+            </span>
+            <span>中医针灸智能知识问答</span>
+          </div>
+          {loadProgress !== null && loadProgress < 100 && (
+            <div
+              style={{
+                marginLeft: 'auto',
+                width: 200,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  marginBottom: 4,
+                  color: '#1F6F52',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'visible',
+                }}
+              >
+                正在准备 3D 模型 · {loadProgress}%
+              </div>
+              <Progress
+                percent={loadProgress}
+                size="small"
+                strokeColor="#1F6F52"
+                showInfo={false}
+              />
+            </div>
+          )}
+          {modelScene && (
+            <div style={{ marginLeft: 'auto', color: '#5BAF7D', fontSize: 12, fontWeight: 500 }}>
+              ● 3D 模型就绪
+            </div>
+          )}
+        </Header>
+        <Layout style={{ background: '#FAFAF8' }}>
+          <Sider
+            width={280}
             style={{
-              padding: 24,
-              margin: 0,
-              minHeight: 280,
-              background: colorBgContainer,
-              borderRadius: borderRadiusLG,
-              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              background: 'transparent',
+              padding: '20px 16px',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
             }}
           >
-            {renderContent()}
-          </Content>
+            <Menu
+              mode="inline"
+              selectedKeys={[selectedMenu]}
+              onClick={({ key }) => setSelectedMenu(key)}
+              items={menuItems}
+              style={{ flex: 1, borderRight: 0, paddingTop: 4, minHeight: 0 }}
+            />
+            <ShichenTip />
+          </Sider>
+          <Layout style={{ padding: '32px 32px 32px 24px', background: '#FAFAF8' }}>
+            <Content
+              style={{
+                padding: 0,
+                margin: 0,
+                minHeight: 280,
+                background: 'transparent',
+                borderRadius: 0,
+                boxShadow: 'none',
+              }}
+            >
+              {renderContent()}
+            </Content>
+          </Layout>
         </Layout>
       </Layout>
-    </Layout>
+    </ConfigProvider>
   );
 }
 

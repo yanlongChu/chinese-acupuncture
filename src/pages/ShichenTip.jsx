@@ -26,15 +26,18 @@ const ShichenTip = () => {
   return (
     <div
       style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        padding: '12px 14px',
-        background: 'linear-gradient(135deg, #fdf6ec 0%, #f5e6d3 100%)',
-        borderTop: '1px solid #e8d9bf',
-        maxHeight: '55%',
-        overflowY: 'auto',
+        position: 'fixed',
+        left: 24,
+        bottom: 24,
+        width: 248,
+        padding: '14px 14px 12px',
+        background: 'linear-gradient(180deg, #F2F7F3 0%, #FFFFFF 45%)',
+        border: '1px solid #D9E5DD',
+        borderRadius: 22,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02), 0 10px 28px rgba(31, 111, 82, 0.08)',
+        zIndex: 100,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}
     >
       <div
@@ -42,43 +45,92 @@ const ShichenTip = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 8,
+          marginBottom: 10,
+          gap: 8,
+          minWidth: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 20 }}>{shichen.icon}</span>
-          <span style={{ fontWeight: 700, color: '#7a4a1e', fontSize: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>{shichen.icon}</span>
+          <span
+            style={{
+              fontWeight: 600,
+              color: '#1F6F52',
+              fontSize: 13,
+              letterSpacing: '-0.01em',
+              whiteSpace: 'normal',
+              wordBreak: 'break-word',
+              lineHeight: 1.4,
+            }}
+          >
             {shichen.name} · {shichen.meridian}当令
           </span>
         </div>
         <Tooltip title="子午流注实时时辰">
-          <Tag color="gold" icon={<ClockCircleOutlined />}>
+          <Tag
+            color="default"
+            icon={<ClockCircleOutlined />}
+            style={{
+              background: '#1F6F52',
+              color: '#ffffff',
+              border: 'none',
+              flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(31,111,82,0.22)',
+            }}
+          >
             {timeText}
           </Tag>
         </Tooltip>
       </div>
 
-      <div style={{ fontSize: 11, color: '#9a7a4a', marginBottom: 6 }}>
+      <div
+        style={{
+          fontSize: 11,
+          color: '#5BAF7D',
+          marginBottom: 8,
+          wordBreak: 'break-word',
+          whiteSpace: 'normal',
+          fontWeight: 500,
+        }}
+      >
         {dateText} · 气血充盈，调理效果最佳
       </div>
 
       <Card
         size="small"
         style={{
-          background: '#fffaf0',
-          borderColor: '#e8d9bf',
+          background: '#E6F0EA',
+          border: '1px solid #C8DED1',
           marginBottom: 6,
+          borderRadius: 14,
+          boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '8px 10px' }}
+        bodyStyle={{ padding: '10px 12px' }}
       >
-        <div style={{ fontSize: 12, color: '#7a4a1e', fontWeight: 600, marginBottom: 4 }}>
-          <AimOutlined style={{ color: '#d48806', marginRight: 4 }} />
+        <div style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600, marginBottom: 4 }}>
+          <AimOutlined style={{ color: '#1F6F52', marginRight: 4 }} />
           针灸优选
         </div>
-        <div style={{ fontSize: 12, color: '#333', lineHeight: 1.6 }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: '#1f2937',
+            lineHeight: 1.6,
+            wordBreak: 'break-word',
+            whiteSpace: 'normal',
+          }}
+        >
           {shichen.acupuncture}
         </div>
-        <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: '#5BAF7D',
+            marginTop: 4,
+            wordBreak: 'break-word',
+            whiteSpace: 'normal',
+          }}
+        >
           功效：{shichen.acupunctureEffect}
         </div>
       </Card>
@@ -86,35 +138,59 @@ const ShichenTip = () => {
       <Card
         size="small"
         style={{
-          background: '#f0f9f0',
-          borderColor: '#c6e6c6',
+          background: '#F7EBDC',
+          border: '1px solid #E5D4BB',
           marginBottom: 6,
+          borderRadius: 14,
+          boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '8px 10px' }}
+        bodyStyle={{ padding: '10px 12px' }}
       >
-        <div style={{ fontSize: 12, color: '#2b7a2b', fontWeight: 600, marginBottom: 4 }}>
-          <SkinOutlined style={{ color: '#2b7a2b', marginRight: 4 }} />
+        <div style={{ fontSize: 12, color: '#8C6A43', fontWeight: 600, marginBottom: 4 }}>
+          <SkinOutlined style={{ color: '#C58B54', marginRight: 4 }} />
           日常按摩
         </div>
-        <div style={{ fontSize: 12, color: '#333' }}>{shichen.massage}</div>
+        <div
+          style={{
+            fontSize: 12,
+            color: '#1f2937',
+            lineHeight: 1.6,
+            wordBreak: 'break-word',
+            whiteSpace: 'normal',
+          }}
+        >
+          {shichen.massage}
+        </div>
       </Card>
 
       <Card
         size="small"
         style={{
-          background: '#fff4e6',
-          borderColor: '#ffd8a8',
+          background: '#F2F7F3',
+          border: '1px solid #D9E5DD',
+          borderRadius: 14,
+          boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '8px 10px' }}
+        bodyStyle={{ padding: '10px 12px' }}
       >
-        <div style={{ fontSize: 12, color: '#ad6800', fontWeight: 600, marginBottom: 4 }}>
-          <BulbOutlined style={{ color: '#fa8c16', marginRight: 4 }} />
+        <div style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600, marginBottom: 4 }}>
+          <BulbOutlined style={{ color: '#C58B54', marginRight: 4 }} />
           作息提示
         </div>
-        <div style={{ fontSize: 12, color: '#555', lineHeight: 1.6 }}>{shichen.tip}</div>
+        <div
+          style={{
+            fontSize: 12,
+            color: '#1f2937',
+            lineHeight: 1.6,
+            wordBreak: 'break-word',
+            whiteSpace: 'normal',
+          }}
+        >
+          {shichen.tip}
+        </div>
       </Card>
 
-      <Divider style={{ margin: '10px 0', borderColor: '#e8d9bf' }} />
+      <Divider style={{ margin: '12px 0', borderColor: '#D9E5DD' }} />
 
       <div
         style={{
@@ -122,12 +198,14 @@ const ShichenTip = () => {
           alignItems: 'flex-start',
           gap: 6,
           fontSize: 11,
-          color: '#999',
+          color: '#8C6A43',
           lineHeight: 1.5,
+          wordBreak: 'break-word',
+          whiteSpace: 'normal',
         }}
       >
-        <WarningOutlined style={{ color: '#faad14', marginTop: 2 }} />
-        <div>
+        <WarningOutlined style={{ color: '#C58B54', marginTop: 2, flexShrink: 0 }} />
+        <div style={{ wordBreak: 'break-word', whiteSpace: 'normal', color: '#8C6A43' }}>
           针灸需专业中医师操作，禁止自行扎针；按摩仅作日常保健参考。
         </div>
       </div>

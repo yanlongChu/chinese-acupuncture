@@ -484,7 +484,7 @@ const KnowledgeBase = () => {
         <span>
           <MedicineBoxOutlined style={{ marginRight: 6 }} />
           基础穴位
-          <Badge count={basicList.length} style={{ backgroundColor: '#667eea', marginLeft: 8 }} overflowCount={999} />
+          <Badge count={basicList.length} style={{ backgroundColor: '#1F6F52', marginLeft: 8 }} overflowCount={999} />
         </span>
       ),
     },
@@ -494,7 +494,7 @@ const KnowledgeBase = () => {
         <span>
           <ExperimentOutlined style={{ marginRight: 6 }} />
           配伍与诊疗
-          <Badge count={compatList.length} style={{ backgroundColor: '#f093fb', marginLeft: 8 }} overflowCount={999} />
+          <Badge count={compatList.length} style={{ backgroundColor: '#1F6F52', marginLeft: 8 }} overflowCount={999} />
         </span>
       ),
     },
@@ -504,7 +504,7 @@ const KnowledgeBase = () => {
         <span>
           <ToolOutlined style={{ marginRight: 6 }} />
           操作与技法
-          <Badge count={techList.length} style={{ backgroundColor: '#4facfe', marginLeft: 8 }} overflowCount={999} />
+          <Badge count={techList.length} style={{ backgroundColor: '#1F6F52', marginLeft: 8 }} overflowCount={999} />
         </span>
       ),
     },
@@ -532,23 +532,30 @@ const KnowledgeBase = () => {
   const currentFiltered = getCurrentFiltered();
 
   return (
-    <div>
-      <div className="page-header">
-        <h1 className="page-title">
-          <ScanOutlined style={{ marginRight: 8, color: '#667eea' }} />
-          知识库管理
-        </h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setCurrentRecord(null);
-            form.resetFields();
-            setIsModalVisible(true);
-          }}
-        >
-          新增记录
-        </Button>
+    <div className="fade-in" style={{ padding: '0 16px', maxWidth: '100%' }}>
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <h1 style={{ fontSize: 40, fontWeight: 700, color: '#1f2937', letterSpacing: '-0.025em', margin: 0 }}>
+              知识库
+            </h1>
+            <p style={{ fontSize: 15, color: '#8a8f89', marginTop: 8, marginBottom: 0, letterSpacing: '-0.01em' }}>
+              中医针灸基础穴位、辨证配穴与技法操作全收录
+            </p>
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setCurrentRecord(null);
+              form.resetFields();
+              setIsModalVisible(true);
+            }}
+            style={{ borderRadius: 14, height: 40, fontWeight: 500 }}
+          >
+            新增记录
+          </Button>
+        </div>
       </div>
 
       {/* Tab 分类 */}
@@ -619,36 +626,36 @@ const KnowledgeBase = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={12} sm={6}>
           <Card size="small" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#667eea' }}>{getCurrentList().length}</div>
-            <div style={{ fontSize: 12, color: '#999' }}>
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#1f2937', letterSpacing: '-0.02em' }}>{getCurrentList().length}</div>
+            <div style={{ fontSize: 12, color: '#8a8f89', fontWeight: 500 }}>
               {activeTab === 'basic' ? '穴位总数' : activeTab === 'compat' ? '方案总数' : '技法总数'}
             </div>
           </Card>
         </Col>
         <Col xs={12} sm={6}>
           <Card size="small" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#ff4d4f' }}>
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#C95A4A', letterSpacing: '-0.02em' }}>
               {getCurrentList().filter(a => a.dangerLevel === '危险').length}
             </div>
-            <div style={{ fontSize: 12, color: '#999' }}>危险项目</div>
+            <div style={{ fontSize: 12, color: '#8a8f89', fontWeight: 500 }}>危险项目</div>
           </Card>
         </Col>
         <Col xs={12} sm={6}>
           <Card size="small" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#5BAF7D', letterSpacing: '-0.02em' }}>
               {getCurrentList().filter(a => a.status === '已发布').length}
             </div>
-            <div style={{ fontSize: 12, color: '#999' }}>已发布</div>
+            <div style={{ fontSize: 12, color: '#8a8f89', fontWeight: 500 }}>已发布</div>
           </Card>
         </Col>
         <Col xs={12} sm={6}>
           <Card size="small" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff' }}>
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#1F6F52', letterSpacing: '-0.02em' }}>
               {activeTab === 'compat'
                 ? new Set(getCurrentList().map(a => a.diseaseCategory)).size
                 : new Set(getCurrentList().map(a => a.meridian)).size}
             </div>
-            <div style={{ fontSize: 12, color: '#999' }}>分类数</div>
+            <div style={{ fontSize: 12, color: '#8a8f89', fontWeight: 500 }}>分类数</div>
           </Card>
         </Col>
       </Row>

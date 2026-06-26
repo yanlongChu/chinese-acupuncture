@@ -64,15 +64,15 @@ const renderContentWithAcupointLinks = (content, onAcupointClick) => {
           key={i}
           onClick={() => onAcupointClick(acupoint)}
           style={{
-            color: '#667eea',
+            color: '#1F6F52',
             fontWeight: 600,
             cursor: 'pointer',
-            borderBottom: '1px dashed #667eea',
+            borderBottom: '1px dashed #1F6F52',
             padding: '0 2px',
             transition: 'all 0.2s',
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.background = '#f0f0ff';
+            e.currentTarget.style.background = '#F2F7F3';
             e.currentTarget.style.borderRadius = '3px';
           }}
           onMouseLeave={e => {
@@ -230,29 +230,27 @@ const QASystem = ({ onNavigateToVisualization }) => {
   const currentMode = modes.find(m => m.key === activeMode);
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 140px)', gap: 0, margin: -24, background: '#f0f2f5' }}>
+    <div style={{ display: 'flex', height: 'calc(100vh - 140px)', gap: 20, background: 'transparent' }}>
       {/* 左侧边栏 - 对话历史 */}
       <div style={{
         width: 260,
-        background: 'white',
-        borderRight: '1px solid #f0f0f0',
+        background: '#ffffff',
+        border: '1px solid #EEF0ED',
+        borderRadius: 22,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02), 0 8px 24px rgba(31, 111, 82, 0.04)',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0
+        flexShrink: 0,
+        overflow: 'hidden'
       }}>
         {/* 新对话按钮 */}
-        <div style={{ padding: 16, borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ padding: 16, borderBottom: '1px solid #EEF0ED' }}>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleNewConversation}
             block
-            style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              border: 'none',
-              height: 40,
-              borderRadius: 8
-            }}
+            style={{ height: 42, borderRadius: 14, fontWeight: 500 }}
           >
             开启新对话
           </Button>
@@ -260,7 +258,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
 
         {/* 对话列表 */}
         <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
-          <div style={{ padding: '8px 16px', fontSize: 13, color: '#999', fontWeight: 500 }}>
+          <div style={{ padding: '12px 16px 8px', fontSize: 12, color: '#8a8f89', fontWeight: 600, letterSpacing: '0.02em' }}>
             对话记录
           </div>
           {conversations.length === 0 ? (
@@ -271,18 +269,19 @@ const QASystem = ({ onNavigateToVisualization }) => {
                 key={conv.id}
                 onClick={() => handleSelectConversation(conv.id)}
                 style={{
-                  padding: '10px 16px',
+                  margin: '4px 8px',
+                  padding: '10px 12px',
                   cursor: 'pointer',
-                  background: activeConversationId === conv.id ? '#f0f5ff' : 'transparent',
-                  borderLeft: activeConversationId === conv.id ? '3px solid #667eea' : '3px solid transparent',
+                  background: activeConversationId === conv.id ? '#F2F7F3' : 'transparent',
+                  borderRadius: 12,
                   transition: 'all 0.2s',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8
+                  gap: 10
                 }}
                 onMouseEnter={e => {
                   if (activeConversationId !== conv.id) {
-                    e.currentTarget.style.background = '#fafafa';
+                    e.currentTarget.style.background = '#F2F4F2';
                   }
                 }}
                 onMouseLeave={e => {
@@ -291,27 +290,30 @@ const QASystem = ({ onNavigateToVisualization }) => {
                   }
                 }}
               >
-                <MessageOutlined style={{ color: '#667eea', fontSize: 14, flexShrink: 0 }} />
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#F2F7F3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#1F6F52', fontSize: 13 }}>
+                  <MessageOutlined />
+                </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <div style={{
                     fontSize: 13,
-                    color: '#333',
+                    color: '#1f2937',
+                    fontWeight: 500,
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
                   }}>
                     {conv.title}
                   </div>
-                  <div style={{ fontSize: 11, color: '#bbb', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: '#8a8f89', marginTop: 2 }}>
                     {conv.createTime}
                   </div>
                 </div>
                 <Tooltip title="删除">
                   <DeleteOutlined
-                    style={{ color: '#ccc', fontSize: 12, flexShrink: 0 }}
+                    style={{ color: '#c7c7cc', fontSize: 12, flexShrink: 0 }}
                     onClick={(e) => handleDeleteConversation(conv.id, e)}
-                    onMouseEnter={e => e.currentTarget.style.color = '#ff4d4f'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#ccc'}
+                    onMouseEnter={e => e.currentTarget.style.color = '#C95A4A'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#c7c7cc'}
                   />
                 </Tooltip>
               </div>
@@ -322,21 +324,22 @@ const QASystem = ({ onNavigateToVisualization }) => {
         {/* 底部统计 */}
         <div style={{
           padding: 12,
-          borderTop: '1px solid #f0f0f0',
+          borderTop: '1px solid #EEF0ED',
           fontSize: 12,
-          color: '#999',
-          textAlign: 'center'
+          color: '#8a8f89',
+          textAlign: 'center',
+          fontWeight: 500
         }}>
-          共 {conversations.length} 条对话记录
+          共 {conversations.length} 条对话
         </div>
       </div>
 
       {/* 右侧主区域 */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#ffffff', border: '1px solid #EEF0ED', borderRadius: 22, boxShadow: '0 1px 2px rgba(0,0,0,0.02), 0 8px 24px rgba(31, 111, 82, 0.04)' }}>
         {activeConversation ? (
           <>
             {/* 对话消息区域 */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '24px 48px' }}>
+            <div style={{ flex: 1, overflow: 'auto', padding: '32px 48px 32px 58px' }}>
               {activeConversation.messages.map((msg, index) => (
                 <div
                   key={index}
@@ -349,29 +352,28 @@ const QASystem = ({ onNavigateToVisualization }) => {
                   }}
                 >
                   <Avatar
-                    size={40}
+                    size={36}
                     style={{
-                      background: msg.role === 'user'
-                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                        : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                      flexShrink: 0
+                      background: '#F2F7F3',
+                      color: '#1F6F52',
+                      flexShrink: 0,
+                      fontWeight: 500
                     }}
                     icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
                   />
                   <div style={{
-                    maxWidth: '70%',
-                    background: msg.role === 'user' ? '#f0f5ff' : 'white',
-                    borderRadius: 12,
-                    padding: '14px 18px',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    border: msg.role === 'user' ? '1px solid #d6e4ff' : '1px solid #f0f0f0'
+                    maxWidth: '75%',
+                    background: msg.role === 'user' ? '#1F6F52' : '#F2F4F2',
+                    color: msg.role === 'user' ? '#ffffff' : '#1f2937',
+                    borderRadius: 18,
+                    padding: '12px 16px',
+                    fontSize: 14,
+                    lineHeight: 1.7,
+                    wordBreak: 'break-word',
+                    boxShadow: msg.role === 'user' ? '0 2px 8px rgba(31,111,82,0.18)' : 'none'
                   }}>
                     <div style={{
-                      fontSize: 14,
-                      lineHeight: 1.8,
-                      color: '#333',
                       whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word'
                     }}>
                       {msg.role === 'ai'
                         ? renderContentWithAcupointLinks(msg.content, handleAcupointClick)
@@ -380,8 +382,8 @@ const QASystem = ({ onNavigateToVisualization }) => {
                     </div>
                     <div style={{
                       fontSize: 11,
-                      color: '#bbb',
-                      marginTop: 8,
+                      color: msg.role === 'user' ? 'rgba(255,255,255,0.65)' : '#8a8f89',
+                      marginTop: 6,
                       textAlign: msg.role === 'user' ? 'right' : 'left'
                     }}>
                       {msg.time}
@@ -394,31 +396,30 @@ const QASystem = ({ onNavigateToVisualization }) => {
               {isTyping && (
                 <div style={{ display: 'flex', gap: 12, marginBottom: 24, alignItems: 'flex-start' }}>
                   <Avatar
-                    size={40}
+                    size={36}
                     style={{
-                      background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                      background: '#F2F7F3',
+                      color: '#1F6F52',
                       flexShrink: 0
                     }}
                     icon={<RobotOutlined />}
                   />
                   <div style={{
-                    background: 'white',
-                    borderRadius: 12,
-                    padding: '14px 18px',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    border: '1px solid #f0f0f0'
+                    background: '#F2F4F2',
+                    borderRadius: 18,
+                    padding: '12px 16px'
                   }}>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                       <div style={{
-                        width: 8, height: 8, borderRadius: '50%', background: '#667eea',
+                        width: 7, height: 7, borderRadius: '50%', background: '#1F6F52',
                         animation: 'pulse 1.4s infinite ease-in-out'
                       }} />
                       <div style={{
-                        width: 8, height: 8, borderRadius: '50%', background: '#667eea',
+                        width: 7, height: 7, borderRadius: '50%', background: '#1F6F52',
                         animation: 'pulse 1.4s infinite ease-in-out 0.2s'
                       }} />
                       <div style={{
-                        width: 8, height: 8, borderRadius: '50%', background: '#667eea',
+                        width: 7, height: 7, borderRadius: '50%', background: '#1F6F52',
                         animation: 'pulse 1.4s infinite ease-in-out 0.4s'
                       }} />
                     </div>
@@ -431,38 +432,38 @@ const QASystem = ({ onNavigateToVisualization }) => {
 
             {/* 底部输入区域 */}
             <div style={{
-              padding: '16px 48px 24px',
+              padding: '16px 24px 24px',
               background: 'white',
-              borderTop: '1px solid #f0f0f0'
+              borderTop: '1px solid #EEF0ED'
             }}>
               <div style={{
-                background: '#f8f9ff',
-                borderRadius: 12,
-                border: '1px solid #e8e8f0',
+                background: '#F2F4F2',
+                borderRadius: 20,
+                border: '1px solid #E5E8E3',
                 overflow: 'hidden'
               }}>
                 {/* 模式标签 */}
                 <div style={{
                   display: 'flex',
-                  gap: 0,
-                  padding: '8px 16px 0',
-                  borderBottom: '1px solid #eee'
+                  gap: 4,
+                  padding: '10px 14px 0',
                 }}>
                   {modes.map(mode => (
                     <div
                       key={mode.key}
                       onClick={() => setActiveMode(mode.key)}
                       style={{
-                        padding: '8px 16px',
+                        padding: '6px 14px',
                         cursor: 'pointer',
                         fontSize: 13,
-                        color: activeMode === mode.key ? '#667eea' : '#666',
-                        fontWeight: activeMode === mode.key ? 600 : 400,
-                        borderBottom: activeMode === mode.key ? '2px solid #667eea' : '2px solid transparent',
+                        color: activeMode === mode.key ? '#1f2937' : '#8a8f89',
+                        background: activeMode === mode.key ? '#ffffff' : 'transparent',
+                        borderRadius: '12px 12px 0 0',
+                        fontWeight: activeMode === mode.key ? 600 : 500,
                         transition: 'all 0.2s',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4
+                        gap: 6
                       }}
                     >
                       {mode.icon}
@@ -472,13 +473,13 @@ const QASystem = ({ onNavigateToVisualization }) => {
                 </div>
 
                 {/* 输入框 */}
-                <div style={{ padding: 12, display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                   <TextArea
                     ref={inputRef}
                     value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={`${currentMode?.label} - 请输入您的中医针灸问题...`}
+                    placeholder={`${currentMode?.label} · 请输入您的中医针灸问题`}
                     autoSize={{ minRows: 1, maxRows: 4 }}
                     style={{
                       border: 'none',
@@ -486,7 +487,9 @@ const QASystem = ({ onNavigateToVisualization }) => {
                       resize: 'none',
                       fontSize: 14,
                       background: 'transparent',
-                      flex: 1
+                      flex: 1,
+                      padding: 6,
+                      lineHeight: 1.6
                     }}
                   />
                   <Button
@@ -495,9 +498,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
                     onClick={handleSend}
                     disabled={!inputValue.trim() || isTyping}
                     style={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      border: 'none',
-                      borderRadius: 8,
+                      borderRadius: 14,
                       width: 40,
                       height: 40,
                       flexShrink: 0
@@ -505,8 +506,8 @@ const QASystem = ({ onNavigateToVisualization }) => {
                   />
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: '#bbb', marginTop: 8, textAlign: 'center' }}>
-                按 Enter 发送，Shift + Enter 换行 | 内容由AI生成，仅供参考
+              <div style={{ fontSize: 11, color: '#8a8f89', marginTop: 8, textAlign: 'center' }}>
+                按 Enter 发送 · Shift + Enter 换行 · 内容由 AI 生成，仅供参考
               </div>
             </div>
           </>
@@ -518,42 +519,47 @@ const QASystem = ({ onNavigateToVisualization }) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 48
+            padding: 48,
+            background: 'radial-gradient(ellipse at top, #F2F7F3 0%, #FAFAF8 70%)'
           }}>
             {/* Logo区域 */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 24,
-              marginBottom: 16
+              gap: 20,
+              marginBottom: 24
             }}>
-              <div style={{
-                width: 120,
-                height: 120,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)'
-              }}>
-                <RobotOutlined style={{ fontSize: 56, color: 'white' }} />
+              <div
+                style={{
+                  width: 88,
+                  height: 88,
+                  background: 'linear-gradient(135deg, #1F6F52 0%, #2D8A6A 100%)',
+                  borderRadius: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 12px 40px rgba(31,111,82,0.25)'
+                }}
+              >
+                <RobotOutlined style={{ fontSize: 42, color: 'white' }} />
               </div>
-              <div>
+              <div style={{ textAlign: 'left' }}>
                 <h1 style={{
-                  fontSize: 36,
+                  fontSize: 34,
                   fontWeight: 700,
-                  color: '#1a1a2e',
-                  margin: 0
+                  color: '#1f2937',
+                  margin: 0,
+                  letterSpacing: '-0.02em'
                 }}>
-                  您的中医针灸AI顾问
+                  您的中医针灸 AI 顾问
                 </h1>
                 <p style={{
-                  fontSize: 16,
-                  color: '#999',
-                  margin: '12px 0 0'
+                  fontSize: 15,
+                  color: '#8a8f89',
+                  margin: '10px 0 0',
+                  letterSpacing: '-0.01em'
                 }}>
-                  穴位查询 · 病症分析 · 针灸方案 · 养生建议，都来问我吧~
+                  穴位查询 · 病症分析 · 针灸方案 · 养生建议
                 </p>
               </div>
             </div>
@@ -562,10 +568,10 @@ const QASystem = ({ onNavigateToVisualization }) => {
             <div style={{
               display: 'flex',
               gap: 16,
-              marginTop: 40,
+              marginTop: 16,
               flexWrap: 'wrap',
               justifyContent: 'center',
-              maxWidth: 700
+              maxWidth: 720
             }}>
               {modes.map(mode => (
                 <div
@@ -575,34 +581,34 @@ const QASystem = ({ onNavigateToVisualization }) => {
                     setTimeout(() => inputRef.current?.focus(), 100);
                   }}
                   style={{
-                    width: 150,
-                    padding: '20px 16px',
-                    background: 'white',
-                    borderRadius: 12,
-                    border: '1px solid #f0f0f0',
+                    width: 160,
+                    padding: '22px 18px',
+                    background: '#ffffff',
+                    borderRadius: 20,
+                    border: '1px solid #EEF0ED',
                     cursor: 'pointer',
-                    transition: 'all 0.3s',
+                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                     textAlign: 'center',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.15)';
-                    e.currentTarget.style.borderColor = '#667eea';
+                    e.currentTarget.style.boxShadow = '0 16px 40px rgba(31,111,82,0.08)';
+                    e.currentTarget.style.borderColor = '#1F6F52';
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-                    e.currentTarget.style.borderColor = '#f0f0f0';
+                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.02)';
+                    e.currentTarget.style.borderColor = '#EEF0ED';
                   }}
                 >
-                  <div style={{ fontSize: 28, marginBottom: 8, color: '#667eea' }}>
+                  <div style={{ fontSize: 24, marginBottom: 10, color: '#1F6F52' }}>
                     {mode.icon}
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#333', marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937', marginBottom: 6, letterSpacing: '-0.01em' }}>
                     {mode.label}
                   </div>
-                  <div style={{ fontSize: 11, color: '#999' }}>
+                  <div style={{ fontSize: 12, color: '#8a8f89', lineHeight: 1.5 }}>
                     {mode.desc}
                   </div>
                 </div>
@@ -610,9 +616,9 @@ const QASystem = ({ onNavigateToVisualization }) => {
             </div>
 
             {/* 快捷提问 */}
-            <div style={{ marginTop: 40, width: '100%', maxWidth: 600 }}>
-              <div style={{ fontSize: 13, color: '#999', marginBottom: 12, textAlign: 'center' }}>
-                试试这样问：
+            <div style={{ marginTop: 24, width: '100%', maxWidth: 620 }}>
+              <div style={{ fontSize: 12, color: '#8a8f89', marginBottom: 12, textAlign: 'center', fontWeight: 500, letterSpacing: '0.05em' }}>
+                试试这样问
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
                 {['头痛伴有眩晕怎么针灸？', '失眠多梦用什么穴位？', '腰痛持续三天有效吗？', '胃胀气消化不良怎么调理？'].map(q => (
@@ -620,12 +626,13 @@ const QASystem = ({ onNavigateToVisualization }) => {
                     key={q}
                     style={{
                       cursor: 'pointer',
-                      padding: '6px 14px',
+                      padding: '8px 16px',
                       fontSize: 13,
-                      borderRadius: 20,
-                      border: '1px solid #d6e4ff',
-                      background: '#f0f5ff',
-                      color: '#667eea'
+                      borderRadius: 980,
+                      background: '#F2F7F3',
+                      color: '#1F6F52',
+                      border: 'none',
+                      fontWeight: 500
                     }}
                     onClick={() => {
                       setInputValue(q);
@@ -641,36 +648,36 @@ const QASystem = ({ onNavigateToVisualization }) => {
             {/* 底部输入框 */}
             <div style={{
               width: '100%',
-              maxWidth: 600,
-              marginTop: 32,
-              background: 'white',
-              borderRadius: 12,
-              border: '1px solid #e8e8f0',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+              maxWidth: 620,
+              marginTop: 24,
+              background: '#ffffff',
+              borderRadius: 22,
+              border: '1px solid #E5E8E3',
+              boxShadow: '0 8px 32px rgba(31,111,82,0.08)',
               overflow: 'hidden'
             }}>
               {/* 模式标签 */}
               <div style={{
                 display: 'flex',
-                gap: 0,
-                padding: '8px 16px 0',
-                borderBottom: '1px solid #f0f0f0'
+                gap: 4,
+                padding: '12px 14px 0',
               }}>
                 {modes.map(mode => (
                   <div
                     key={mode.key}
                     onClick={() => setActiveMode(mode.key)}
                     style={{
-                      padding: '8px 16px',
+                      padding: '6px 14px',
                       cursor: 'pointer',
                       fontSize: 13,
-                      color: activeMode === mode.key ? '#667eea' : '#666',
-                      fontWeight: activeMode === mode.key ? 600 : 400,
-                      borderBottom: activeMode === mode.key ? '2px solid #667eea' : '2px solid transparent',
+                      color: activeMode === mode.key ? '#1f2937' : '#8a8f89',
+                      background: activeMode === mode.key ? '#F2F4F2' : 'transparent',
+                      borderRadius: '12px 12px 0 0',
+                      fontWeight: activeMode === mode.key ? 600 : 500,
                       transition: 'all 0.2s',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 4
+                      gap: 6
                     }}
                   >
                     {mode.icon}
@@ -679,13 +686,13 @@ const QASystem = ({ onNavigateToVisualization }) => {
                 ))}
               </div>
 
-              <div style={{ padding: 12, display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                 <TextArea
                   ref={inputRef}
                   value={inputValue}
                   onChange={e => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={`${currentMode?.label} - 请输入您的中医针灸问题...`}
+                  placeholder={`${currentMode?.label} · 请输入您的中医针灸问题`}
                   autoSize={{ minRows: 1, maxRows: 4 }}
                   style={{
                     border: 'none',
@@ -693,7 +700,9 @@ const QASystem = ({ onNavigateToVisualization }) => {
                     resize: 'none',
                     fontSize: 14,
                     background: 'transparent',
-                    flex: 1
+                    flex: 1,
+                    padding: 6,
+                    lineHeight: 1.6
                   }}
                 />
                 <Button
@@ -702,9 +711,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
                   onClick={handleSend}
                   disabled={!inputValue.trim()}
                   style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    border: 'none',
-                    borderRadius: 8,
+                    borderRadius: 14,
                     width: 40,
                     height: 40,
                     flexShrink: 0
