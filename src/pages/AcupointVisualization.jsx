@@ -342,6 +342,7 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
     update: () => {},
     reset: () => {},
   });
+  const didInitRef = useRef(false);  // 防止子组件 remount 时把相机重置
 
   // 自己检测到的模型包围盒（后备方案：当 modelTransform 为 null 时使用）
   const [detectedTransform, setDetectedTransform] = useState(null);
@@ -495,7 +496,7 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
 
   const handleLocate = () => {
     if (!selectedAcupoint) return;
-    flyTo(selectedAcupoint.position, 1.2, 0.25);
+    flyTo(selectedAcupoint.position);
     message.success(`已聚焦：${selectedAcupoint.name}`);
   };
 
@@ -517,39 +518,61 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
 
-  // 通用相机移动函数
-  const flyTo = (worldPos, distance = 1.2, heightAbove = 0.25) => {
+  // 通用相机移动函数：距离越高（头部越近）、距离越低（足部越远）
+  const flyTo = (worldPos, distance, heightAbove) => {
     if (!cameraRef.current || !controlsRef.current) {
-      // ref 还没准备好，延迟 100ms 重试
-      setTimeout(() => flyTo(worldPos, distance, heightAbove), 100);
+      setTimeout(() => flyTo(worldPos, distance, heightAbove), 80);
       return false;
     }
     const pos = worldPos || { x: 0, y: 0.5, z: 0 };
+
+    // 根据穴位高度 y 自适应相机距离：头部/上半身更近（更清晰），下半身稍远
+    const y = pos.y;
+    const dist = distance ?? (y > 0.7 ? 0.55 : y > 0.2 ? 0.9 : 1.25);
+    const hAbove = heightAbove ?? (y > 0.7 ? 0.12 : 0.2);
+    const sideOffset = y > 0.7 ? 0.15 : 0;
+
+    const camPos = new THREE.Vector3(pos.x + sideOffset, pos.y + hAbove, pos.z + dist);
+    cameraRef.current.position.copy(camPos);
     controlsRef.current.target.set(pos.x, pos.y, pos.z);
-    // 让相机从穴位前上方看过去
-    cameraRef.current.position.set(pos.x, pos.y + heightAbove, pos.z + distance);
     cameraRef.current.lookAt(controlsRef.current.target);
+    controlsRef.current.update();
     return true;
   };
 
   // 接收来自问答模块的穴位跳转
   useEffect(() => {
-    if (highlightAcupoint) {
-      const target = transformedAcupoints.find(p => p.code === highlightAcupoint.code);
-      if (target) {
+    if (!highlightAcupoint) return;
+
+    const target = transformedAcupoints.find(p => p.code === highlightAcupoint.code);
+    if (!target) return;
+
+    const applyFocus = () => {
+      const ok = flyTo(target.position);
+      if (ok) {
         const meridianPoints = transformedAcupoints.filter(p => p.meridian === target.meridian);
         setFilteredAcupoints(meridianPoints);
         setSelectedAcupoint(target);
         setSearchKeyword('');
         setFilterMeridian(target.meridian);
         setActiveView('all');
-
-        // 把相机飞到该穴位
-        flyTo(target.position, 1.2, 0.25);
-
         message.success(`已定位到 ${target.name}（${target.code}），所属${target.meridian}`);
         if (onReady) onReady();
       }
+    };
+
+    // 等 cameraRef / controlsRef 就绪后再聚焦，避免被 SmartSceneController 的初始化覆盖
+    if (cameraRef.current && controlsRef.current) {
+      // 直接从问答跳过来时，覆盖默认初始化相机位置
+      didInitRef.current = true;
+      applyFocus();
+    } else {
+      // 下一帧重试（SmartSceneController 会在首次挂载后设置 ref）
+      const timer = setTimeout(() => {
+        didInitRef.current = true;
+        applyFocus();
+      }, 120);
+      return () => clearTimeout(timer);
     }
   }, [highlightAcupoint, transformedAcupoints]);
 
@@ -682,11 +705,13 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
                 controlsRef={controlsRef}
                 onCameraAvailable={(cam) => {
                   cameraRef.current = cam;
-                  // 同步默认 camera 位置到 controls target
-                  if (cam && controlsRef.current) {
+                  // 只有首次挂载时才把相机重置到默认位置；
+                  // 后续子组件 remount 不得覆盖已设置的聚焦位置
+                  if (!didInitRef.current && cam && controlsRef.current) {
                     cam.position.set(0, 0.5, 3.2);
                     controlsRef.current.target.set(0, 0.5, 0);
                     cam.lookAt(controlsRef.current.target);
+                    didInitRef.current = true;
                   }
                 }}
               />

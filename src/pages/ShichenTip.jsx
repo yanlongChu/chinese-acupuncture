@@ -13,7 +13,7 @@ const ShichenTip = () => {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60 * 1000);
+    const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -22,6 +22,7 @@ const ShichenTip = () => {
   const dateText = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
     now.getDate()
   ).padStart(2, '0')}`;
+  const clockText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
   return (
     <div
@@ -35,7 +36,7 @@ const ShichenTip = () => {
         border: '1px solid #D9E5DD',
         borderRadius: 22,
         boxShadow: '0 1px 2px rgba(0,0,0,0.02), 0 10px 28px rgba(31, 111, 82, 0.08)',
-        zIndex: 100,
+        zIndex: 1000,
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}

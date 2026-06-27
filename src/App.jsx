@@ -23,6 +23,7 @@ function App() {
   const [modelScene, setModelScene] = useState(null);
   const [modelTransform, setModelTransform] = useState(null);
   const [loadProgress, setLoadProgress] = useState(null);
+  const [highlightAcupoint, setHighlightAcupoint] = useState(null);
   const {
     token: { borderRadiusLG },
   } = theme.useToken();
@@ -104,6 +105,19 @@ function App() {
     },
   ];
 
+  const handleNavigateToVisualization = (acupoint) => {
+    setHighlightAcupoint(acupoint);
+    setSelectedMenu('visualization');
+  };
+
+  const handleMenuClick = ({ key }) => {
+    // 从导航进入 3D 页面：清空穴位聚焦状态，使用默认人体比例视角
+    if (key === 'visualization') {
+      setHighlightAcupoint(null);
+    }
+    setSelectedMenu(key);
+  };
+
   const renderContent = () => {
     return (
       <>
@@ -111,10 +125,14 @@ function App() {
           <Dashboard onNavigate={setSelectedMenu} />
         </div>
         <div style={{ display: selectedMenu === 'qa' ? 'block' : 'none' }}>
-          <QASystem />
+          <QASystem onNavigateToVisualization={handleNavigateToVisualization} />
         </div>
         <div style={{ display: selectedMenu === 'visualization' ? 'block' : 'none' }}>
-          <AcupointVisualization preloadedScene={modelScene} modelTransform={modelTransform} />
+          <AcupointVisualization
+            preloadedScene={modelScene}
+            modelTransform={modelTransform}
+            highlightAcupoint={highlightAcupoint}
+          />
         </div>
         <div style={{ display: selectedMenu === 'knowledge' ? 'block' : 'none' }}>
           <KnowledgeBase />
@@ -142,10 +160,16 @@ function App() {
         },
       }}
     >
-      <Layout style={{ minHeight: '100vh', background: '#FAFAF8' }}>
+      <Layout style={{ height: '100vh', background: '#FAFAF8', overflow: 'hidden' }}>
         <Header
           className="app-header"
-          style={{ borderBottom: '1px solid #EEF0ED', boxShadow: 'none' }}
+          style={{
+            borderBottom: '1px solid #EEF0ED',
+            boxShadow: 'none',
+            flexShrink: 0,
+            height: 64,
+            lineHeight: '64px',
+          }}
         >
           <div className="app-title">
             <span className="app-title-icon">
@@ -190,7 +214,7 @@ function App() {
             </div>
           )}
         </Header>
-        <Layout style={{ background: '#FAFAF8' }}>
+        <Layout style={{ background: '#FAFAF8', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <Sider
             width={280}
             style={{
@@ -200,18 +224,28 @@ function App() {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
+              flexShrink: 0,
+              height: '100%',
             }}
           >
             <Menu
               mode="inline"
               selectedKeys={[selectedMenu]}
-              onClick={({ key }) => setSelectedMenu(key)}
+              onClick={handleMenuClick}
               items={menuItems}
               style={{ flex: 1, borderRight: 0, paddingTop: 4, minHeight: 0 }}
             />
             <ShichenTip />
           </Sider>
-          <Layout style={{ padding: '32px 32px 32px 24px', background: '#FAFAF8' }}>
+          <Layout
+            style={{
+              padding: '32px 32px 32px 24px',
+              background: '#FAFAF8',
+              flex: 1,
+              minHeight: 0,
+              overflow: 'auto',
+            }}
+          >
             <Content
               style={{
                 padding: 0,
