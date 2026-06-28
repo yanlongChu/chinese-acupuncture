@@ -186,6 +186,7 @@ function App() {
                 flexDirection: 'column',
                 justifyContent: 'center',
                 flexShrink: 0,
+                lineHeight: 'normal',
               }}
             >
               <div
@@ -195,7 +196,6 @@ function App() {
                   color: '#1F6F52',
                   fontWeight: 600,
                   whiteSpace: 'nowrap',
-                  overflow: 'visible',
                 }}
               >
                 正在准备 3D 模型 · {loadProgress}%
@@ -205,6 +205,7 @@ function App() {
                 size="small"
                 strokeColor="#1F6F52"
                 showInfo={false}
+                className="app-header-progress"
               />
             </div>
           )}

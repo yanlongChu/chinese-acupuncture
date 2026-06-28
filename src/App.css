@@ -74,8 +74,20 @@ body {
   font-weight: 500 !important;
 }
 
+/* 已选中项的悬浮状态：保持选中样式不被悬浮覆盖 */
+.ant-menu-item-selected:hover {
+  background: #1F6F52 !important;
+  color: #ffffff !important;
+}
+
 .ant-menu-item-selected .ant-menu-item-icon,
 .ant-menu-item-selected .anticon {
+  color: #ffffff !important;
+}
+
+/* 选中项悬浮时图标也保持白色 */
+.ant-menu-item-selected:hover .ant-menu-item-icon,
+.ant-menu-item-selected:hover .anticon {
   color: #ffffff !important;
 }
 
@@ -275,6 +287,19 @@ body {
 
 .ant-progress-bg {
   border-radius: 980px !important;
+}
+
+.app-header-progress {
+  width: 100%;
+  margin: 0;
+  line-height: normal;
+}
+.app-header-progress .ant-progress-inner {
+  width: 100% !important;
+}
+.app-header-progress .ant-progress-bg {
+  /* 确保进度宽度严格按 percent 显示 */
+  transition: width 0.3s ease;
 }
 
 .ant-form-item-label > label {

@@ -30,8 +30,8 @@ const ShichenTip = () => {
         position: 'fixed',
         left: 24,
         bottom: 24,
-        width: 248,
-        padding: '14px 14px 12px',
+        width: 232,
+        padding: '12px 12px 10px',
         background: 'linear-gradient(180deg, #F2F7F3 0%, #FFFFFF 45%)',
         border: '1px solid #D9E5DD',
         borderRadius: 22,
@@ -46,22 +46,23 @@ const ShichenTip = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 10,
-          gap: 8,
+          marginBottom: 8,
+          gap: 6,
           minWidth: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>{shichen.icon}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>{shichen.icon}</span>
           <span
             style={{
               fontWeight: 600,
               color: '#1F6F52',
-              fontSize: 13,
+              fontSize: 12,
               letterSpacing: '-0.01em',
-              whiteSpace: 'normal',
-              wordBreak: 'break-word',
-              lineHeight: 1.4,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              lineHeight: 1.3,
             }}
           >
             {shichen.name} · {shichen.meridian}当令
@@ -77,6 +78,10 @@ const ShichenTip = () => {
               border: 'none',
               flexShrink: 0,
               boxShadow: '0 2px 8px rgba(31,111,82,0.22)',
+              fontSize: 11,
+              lineHeight: '18px',
+              padding: '0 6px',
+              margin: 0,
             }}
           >
             {timeText}
@@ -88,9 +93,7 @@ const ShichenTip = () => {
         style={{
           fontSize: 11,
           color: '#5BAF7D',
-          marginBottom: 8,
-          wordBreak: 'break-word',
-          whiteSpace: 'normal',
+          marginBottom: 6,
           fontWeight: 500,
         }}
       >
@@ -102,21 +105,21 @@ const ShichenTip = () => {
         style={{
           background: '#E6F0EA',
           border: '1px solid #C8DED1',
-          marginBottom: 6,
+          marginBottom: 5,
           borderRadius: 14,
           boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '10px 12px' }}
+        bodyStyle={{ padding: '8px 10px' }}
       >
-        <div style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600, marginBottom: 4 }}>
-          <AimOutlined style={{ color: '#1F6F52', marginRight: 4 }} />
+        <div style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600, marginBottom: 3 }}>
+          <AimOutlined style={{ color: '#1F6F52', marginRight: 3 }} />
           针灸优选
         </div>
         <div
           style={{
             fontSize: 12,
             color: '#1f2937',
-            lineHeight: 1.6,
+            lineHeight: 1.55,
             wordBreak: 'break-word',
             whiteSpace: 'normal',
           }}
@@ -127,7 +130,7 @@ const ShichenTip = () => {
           style={{
             fontSize: 11,
             color: '#5BAF7D',
-            marginTop: 4,
+            marginTop: 3,
             wordBreak: 'break-word',
             whiteSpace: 'normal',
           }}
@@ -141,21 +144,21 @@ const ShichenTip = () => {
         style={{
           background: '#F7EBDC',
           border: '1px solid #E5D4BB',
-          marginBottom: 6,
+          marginBottom: 5,
           borderRadius: 14,
           boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '10px 12px' }}
+        bodyStyle={{ padding: '8px 10px' }}
       >
-        <div style={{ fontSize: 12, color: '#8C6A43', fontWeight: 600, marginBottom: 4 }}>
-          <SkinOutlined style={{ color: '#C58B54', marginRight: 4 }} />
+        <div style={{ fontSize: 12, color: '#8C6A43', fontWeight: 600, marginBottom: 3 }}>
+          <SkinOutlined style={{ color: '#C58B54', marginRight: 3 }} />
           日常按摩
         </div>
         <div
           style={{
             fontSize: 12,
             color: '#1f2937',
-            lineHeight: 1.6,
+            lineHeight: 1.55,
             wordBreak: 'break-word',
             whiteSpace: 'normal',
           }}
@@ -172,17 +175,17 @@ const ShichenTip = () => {
           borderRadius: 14,
           boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '10px 12px' }}
+        bodyStyle={{ padding: '8px 10px' }}
       >
-        <div style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600, marginBottom: 4 }}>
-          <BulbOutlined style={{ color: '#C58B54', marginRight: 4 }} />
+        <div style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600, marginBottom: 3 }}>
+          <BulbOutlined style={{ color: '#C58B54', marginRight: 3 }} />
           作息提示
         </div>
         <div
           style={{
             fontSize: 12,
             color: '#1f2937',
-            lineHeight: 1.6,
+            lineHeight: 1.55,
             wordBreak: 'break-word',
             whiteSpace: 'normal',
           }}
@@ -191,13 +194,13 @@ const ShichenTip = () => {
         </div>
       </Card>
 
-      <Divider style={{ margin: '12px 0', borderColor: '#D9E5DD' }} />
+      <Divider style={{ margin: '8px 0', borderColor: '#D9E5DD' }} />
 
       <div
         style={{
           display: 'flex',
           alignItems: 'flex-start',
-          gap: 6,
+          gap: 5,
           fontSize: 11,
           color: '#8C6A43',
           lineHeight: 1.5,
