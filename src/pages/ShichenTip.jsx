@@ -109,7 +109,7 @@ const ShichenTip = () => {
           borderRadius: 14,
           boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '8px 10px' }}
+        styles={{ body: { padding: '8px 10px' } }}
       >
         <div style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600, marginBottom: 3 }}>
           <AimOutlined style={{ color: '#1F6F52', marginRight: 3 }} />
@@ -148,7 +148,7 @@ const ShichenTip = () => {
           borderRadius: 14,
           boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '8px 10px' }}
+        styles={{ body: { padding: '8px 10px' } }}
       >
         <div style={{ fontSize: 12, color: '#8C6A43', fontWeight: 600, marginBottom: 3 }}>
           <SkinOutlined style={{ color: '#C58B54', marginRight: 3 }} />
@@ -175,7 +175,7 @@ const ShichenTip = () => {
           borderRadius: 14,
           boxShadow: 'none',
         }}
-        bodyStyle={{ padding: '8px 10px' }}
+        styles={{ body: { padding: '8px 10px' } }}
       >
         <div style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600, marginBottom: 3 }}>
           <BulbOutlined style={{ color: '#C58B54', marginRight: 3 }} />

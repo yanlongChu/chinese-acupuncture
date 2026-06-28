@@ -115,8 +115,14 @@ const QASystem = ({ onNavigateToVisualization }) => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const activeIdRef = useRef(null);  // 同步追踪当前活跃对话ID（解决闭包陈旧值问题）
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
+
+  // 同步 activeIdRef，保证 setTimeout/异步逻辑能拿到最新的 id
+  useEffect(() => {
+    activeIdRef.current = activeConversationId;
+  }, [activeConversationId]);
 
   // 滚动到底部
   useEffect(() => {
@@ -126,6 +132,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
   // 开启新对话
   const handleNewConversation = () => {
     setActiveConversationId(null);
+    activeIdRef.current = null;
     setInputValue('');
     setTimeout(() => inputRef.current?.focus(), 100);
   };
@@ -136,6 +143,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (activeConversationId === id) {
       setActiveConversationId(null);
+      activeIdRef.current = null;
     }
     message.success('对话已删除');
   };
@@ -143,6 +151,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
   // 选择对话
   const handleSelectConversation = (id) => {
     setActiveConversationId(id);
+    activeIdRef.current = id;
   };
 
   // 点击穴位链接 - 跳转到3D穴位模块
@@ -174,16 +183,21 @@ const QASystem = ({ onNavigateToVisualization }) => {
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     }).replace(/\//g, '-');
 
-    if (activeConversationId) {
+    // 捕获当前或即将创建的对话ID，避免闭包陈旧值问题
+    let targetId = activeIdRef.current;
+
+    if (targetId) {
       // 追加到当前对话
       setConversations(prev => prev.map(c =>
-        c.id === activeConversationId
+        c.id === targetId
           ? { ...c, messages: [...c.messages, { role: 'user', content: text, time: now }] }
           : c
       ));
     } else {
-      // 创建新对话
+      // 创建新对话：立即生成ID并同步写入 ref
       const newId = Date.now();
+      targetId = newId;
+      activeIdRef.current = newId;
       const newConversation = {
         id: newId,
         title: text.length > 20 ? text.substring(0, 20) + '...' : text,
@@ -197,7 +211,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
     setInputValue('');
     setIsTyping(true);
 
-    // 模拟AI回复延迟
+    // 模拟AI回复延迟 —— 使用已捕获的 targetId，保证正确匹配对话
     setTimeout(() => {
       const aiResponse = getAIResponse(text);
       const aiTime = new Date().toLocaleString('zh-CN', {
@@ -206,7 +220,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
       }).replace(/\//g, '-');
 
       setConversations(prev => prev.map(c =>
-        c.id === (activeConversationId || Date.now())
+        c.id === targetId
           ? { ...c, messages: [...c.messages, { role: 'ai', content: aiResponse, time: aiTime }] }
           : c
       ));

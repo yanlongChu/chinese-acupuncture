@@ -30,6 +30,7 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
+    let lastPercent = -1;
     const loader = new GLTFLoader();
 
     loader.load(
@@ -65,17 +66,22 @@ function App() {
           modelCenter: { x: center.x, y: center.y, z: center.z },
           modelSize: { x: size.x, y: size.y, z: size.z },
         });
-        setLoadProgress(100);
+        if (lastPercent !== 100) {
+          lastPercent = 100;
+          setLoadProgress(100);
+        }
       },
       (xhr) => {
         if (xhr.lengthComputable) {
           const percent = Math.round((xhr.loaded / xhr.total) * 100);
-          setLoadProgress(percent);
+          if (percent !== lastPercent) {
+            lastPercent = percent;
+            setLoadProgress(percent);
+          }
         }
       },
       (err) => {
         if (cancelled) return;
-        setLoadError(err.message || '模型加载失败');
       }
     );
 

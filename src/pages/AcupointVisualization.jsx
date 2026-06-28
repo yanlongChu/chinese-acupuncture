@@ -232,12 +232,16 @@ function AcupointMarker({ acupoint, isSelected, onClick, onDoubleClick, cameraPo
   // 根据穴位在模型中的缩放自适应标记大小
   const markerSize = acupoint._scaleFactor ? 0.018 * acupoint._scaleFactor : 0.018;
   const glowSize = acupoint._scaleFactor ? 0.03 * acupoint._scaleFactor : 0.03;
+  const hitSize = acupoint._scaleFactor ? 0.06 * acupoint._scaleFactor : 0.06;
   const labelOffset = acupoint._scaleFactor ? 0.22 * acupoint._scaleFactor : 0.14;
 
-  // 根据相机位置动态计算标签偏移方向：始终把标签放在"相机与穴位连线方向"上，
-  // 这样无论从正面、背面、左侧、右侧、顶、底哪个角度看，标签都不会被身体挡住
-  // 同时根据相机是否在穴位"负 Z 侧"决定是否对 DOM 文本进行镜面翻转，
-  // 确保背面查看时文字仍正向可读
+  // 统一的事件处理 —— 扩大点击热区的隐形 mesh 与可见 mesh 共用
+  const stopAndHandle = (e, handler) => {
+    e.stopPropagation();
+    handler && handler(acupoint);
+  };
+
+  // 根据相机位置动态计算标签偏移方向
   const labelPos = useMemo(() => {
     const cp = cameraPosition;
     if (!cp) return { pos: [0, labelOffset, 0], mirrored: false };
@@ -245,33 +249,49 @@ function AcupointMarker({ acupoint, isSelected, onClick, onDoubleClick, cameraPo
     const dy = cp.y - acupoint.position.y;
     const dz = cp.z - acupoint.position.z;
     const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-    // 归一化方向 + 稍微给一个向上的偏向，让标签更接近"上方"视觉
     const nx = dx / len;
     const ny = dy / len;
     const nz = dz / len;
     const blendY = ny >= 0 ? 0.55 : 0.15;
     const pos = [nx * labelOffset, ny * labelOffset + blendY * labelOffset, nz * labelOffset];
-    // 相机在穴位的负 Z 侧时，为避免 Html 画布被反向渲染时文字反向，做 X 轴镜面翻转
     const mirrored = nz < -0.1;
     return { pos, mirrored };
   }, [cameraPosition, acupoint.position.x, acupoint.position.y, acupoint.position.z, labelOffset]);
 
   return (
     <group position={[acupoint.position.x, acupoint.position.y, acupoint.position.z]}>
+      {/* 光晕球体 —— 仅视觉 */}
       <mesh ref={glowRef}>
         <sphereGeometry args={[glowSize, 16, 16]} />
-        <meshBasicMaterial color={color} transparent opacity={0.2} />
+        <meshBasicMaterial color={color} transparent opacity={0.2} depthWrite={false} />
       </mesh>
+
+      {/* 点击热区 —— 更大的隐形球体，让小穴位也容易点中 */}
+      <mesh
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerUp={(e) => {
+          e.stopPropagation();
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = 'auto';
+        }}
+        onClick={(e) => stopAndHandle(e, onClick)}
+        onDoubleClick={(e) => stopAndHandle(e, onDoubleClick)}
+      >
+        <sphereGeometry args={[hitSize, 12, 12]} />
+        <meshBasicMaterial color="#fff" transparent opacity={0} depthWrite={false} />
+      </mesh>
+
+      {/* 可见的穴位标记 */}
       <mesh
         ref={meshRef}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
-        onDoubleClick={(e) => {
-          e.stopPropagation();
-          onDoubleClick && onDoubleClick(acupoint);
-        }}
+        onClick={(e) => stopAndHandle(e, onClick)}
+        onDoubleClick={(e) => stopAndHandle(e, onDoubleClick)}
         onPointerOver={(e) => {
           e.stopPropagation();
           setHovered(true);
@@ -350,7 +370,7 @@ function CameraTracker({ onUpdate }) {
 //     * 模型全可见（相机距离较远）→ 围绕 target 旋转
 //     * 模型放大后（相机距离较近）→ 平移视角（朝拖动方向平移）
 // - 滚轮：向上滚放大、向下滚缩小
-function SmartSceneController({ controlsRef, onCameraAvailable }) {
+function SmartSceneController({ controlsRef, onCameraAvailable, onZoomChange }) {
   const { camera, gl, size } = useThree();
 
   // 把 camera 暴露出去
@@ -367,7 +387,7 @@ function SmartSceneController({ controlsRef, onCameraAvailable }) {
   });
 
   // 阈值：相机距离 target > 该值 → 视为"全可见"→ 旋转模式
-  const VISIBLE_DISTANCE_THRESHOLD = 2.3;
+  const VISIBLE_DISTANCE_THRESHOLD = 2.5;
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -448,20 +468,31 @@ function SmartSceneController({ controlsRef, onCameraAvailable }) {
       camera.getWorldDirection(forward);
 
       const currentDist = camera.position.distanceTo(controls.target);
-      const moveDist = -event.deltaY * 0.0012 * currentDist;
+      const moveDist = -event.deltaY * 0.0018 * currentDist;
 
       if (Math.abs(moveDist) < 1e-5) return;
 
-      const moveVec = forward.multiplyScalar(moveDist);
-      const newCam = camera.position.clone().add(moveVec);
-      const newTarget = controls.target.clone().add(moveVec);
+      // 仅移动相机（不移动 target）以实现真正的缩放
+      // 同时把 target 朝相机方向跟进一点，保持近距离时的"平移模式"手感
+      const targetFollowRatio = 0.25;
+      const camMove = forward.clone().multiplyScalar(moveDist);
+      const targetMove = forward.clone().multiplyScalar(moveDist * targetFollowRatio);
+      const newCam = camera.position.clone().add(camMove);
+      const newTarget = controls.target.clone().add(targetMove);
       const newDist = newCam.distanceTo(newTarget);
 
-      if (newDist < 0.4 || newDist > 15) return;
+      // 距离范围：0.3~12，对应百分比约 27~1067%
+      if (newDist < 0.3 || newDist > 12) return;
 
       camera.position.copy(newCam);
       controls.target.copy(newTarget);
       camera.lookAt(controls.target);
+
+      // 同步更新缩放比例：基于标准 3.2 距离反算百分比
+      if (onZoomChange) {
+        const percent = Math.round((3.2 * 100) / newDist);
+        onZoomChange(percent);
+      }
     };
 
     canvas.addEventListener('contextmenu', onContextMenu);
@@ -477,7 +508,7 @@ function SmartSceneController({ controlsRef, onCameraAvailable }) {
       window.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('wheel', onWheel);
     };
-  }, [camera, gl, size, controlsRef]);
+  }, [camera, gl, size, controlsRef, onZoomChange]);
 
   return null;
 }
@@ -526,6 +557,85 @@ function PreloadedModel({ scene, onMeasure, measuredRef }) {
   );
 }
 
+// 相机距离同步组件：每帧把相机距离映射为百分比，可靠同步 UI
+function CameraZoomSync({ targetRef, onZoom }) {
+  const { camera } = useThree();
+  const lastPercentRef = useRef(-1);
+  const throttleRef = useRef(0);
+
+  useFrame((_, delta) => {
+    if (!targetRef || !targetRef.current) return;
+    const target = targetRef.current.target || targetRef.current;
+    const dist = camera.position.distanceTo(target);
+    if (!isFinite(dist) || dist < 0.01) return;
+    const percent = Math.round((3.2 * 100) / dist);
+    if (percent === lastPercentRef.current) return;
+    lastPercentRef.current = percent;
+    // 节流：每 60ms 最多一次回调，避免频繁 setState
+    throttleRef.current += delta;
+    if (throttleRef.current < 0.06) return;
+    throttleRef.current = 0;
+    if (onZoom) onZoom(percent);
+  });
+
+  return null;
+}
+
+// 视角方向判定组件：根据相机相对 target 的位置判断当前视角
+// 根据 VIEW_PRESETS：front cam z=+3.2, target z=0 → dir.z > 0 → front
+function CameraOrientationSync({ targetRef, onOrientation }) {
+  const { camera } = useThree();
+  const lastOrientationRef = useRef('');
+
+  useFrame(() => {
+    // 获取 target：兼容 OrbitControls 实例 (有 .target) 或直接 Vector3
+    let target;
+    if (targetRef && targetRef.current) {
+      target = targetRef.current.target || targetRef.current;
+    }
+    if (!target || typeof target.x !== 'number') return;
+
+    const dir = new THREE.Vector3().subVectors(camera.position, target);
+    const dist = dir.length();
+    if (!isFinite(dist) || dist < 0.05) return;
+    dir.normalize();
+    const x = dir.x, y = dir.y, z = dir.z;
+    const ax = Math.abs(x), ay = Math.abs(y), az = Math.abs(z);
+
+    // 用 45° 阈值判定：主导轴必须至少比次大轴大 50%，避免斜视角误判
+    const ratio = 1.5;
+    let orientation = '';
+    if (ay > ax * ratio && ay > az * ratio) {
+      orientation = y > 0 ? 'top' : 'bottom';
+    } else if (az > ax * ratio && az > ay * ratio) {
+      orientation = z > 0 ? 'front' : 'back';
+    } else if (ax > ay * ratio && ax > az * ratio) {
+      orientation = x > 0 ? 'right' : 'left';
+    } else {
+      // 多轴接近（斜视角）：用主评分判定最接近的方向
+      const candidates = [
+        { key: 'top',    score: y > 0 ? ay : 0 },
+        { key: 'bottom', score: y < 0 ? ay : 0 },
+        { key: 'front',  score: z > 0 ? az : 0 },
+        { key: 'back',   score: z < 0 ? az : 0 },
+        { key: 'right',  score: x > 0 ? ax : 0 },
+        { key: 'left',   score: x < 0 ? ax : 0 },
+      ];
+      candidates.sort((a, b) => b.score - a.score);
+      const top = candidates[0];
+      if (top.score > 0.55) orientation = top.key;
+    }
+
+    if (!orientation) return;
+    if (orientation === lastOrientationRef.current) return;
+    lastOrientationRef.current = orientation;
+    console.log('[Orientation]', orientation, 'dir=[', x.toFixed(2), y.toFixed(2), z.toFixed(2), ']');
+    if (onOrientation) onOrientation(orientation);
+  });
+
+  return null;
+}
+
 const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, modelTransform }) => {
   const [selectedAcupoint, setSelectedAcupoint] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -548,6 +658,33 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
   const searchDebounceRef = useRef(null);  // 搜索防抖定时器
   const canvasWrapperRef = useRef(null);   // 3D画布容器引用，用于恢复原始尺寸
   const prevCanvasSizeRef = useRef(null);  // 保存全屏前的尺寸
+
+  // 缩放比例：百分比形式（100% = 默认）
+  const [zoomScale, setZoomScale] = useState(100);
+  const ZOOM_OPTIONS = [50, 75, 100, 125, 150, 200, 250, 300, 400, 500];
+  const ZOOM_CLAMP_MAX = 500;  // 与最大档位一致
+  const zoomSyncRef = useRef(null);
+
+  // 滚轮缩放时同步更新显示的缩放比例（取最近的档位 + 平滑节流）
+  const handleWheelZoomSync = (percent) => {
+    // 限制在 25 ~ ZOOM_CLAMP_MAX 之间
+    const clamped = Math.max(25, Math.min(ZOOM_CLAMP_MAX, percent));
+    // 清掉上一次的定时更新
+    if (zoomSyncRef.current) {
+      clearTimeout(zoomSyncRef.current);
+      zoomSyncRef.current = null;
+    }
+    // 立即（同步）显示一个"近似"百分比，提供即时反馈
+    setZoomScale(clamped);
+    // 120ms 后把显示百分比对齐到最近的档位，避免抖动
+    zoomSyncRef.current = setTimeout(() => {
+      const nearest = ZOOM_OPTIONS.reduce((prev, curr) =>
+        Math.abs(curr - clamped) < Math.abs(prev - clamped) ? curr : prev
+      , ZOOM_OPTIONS[0]);
+      setZoomScale(nearest);
+      zoomSyncRef.current = null;
+    }, 120);
+  };
 
   // 自己检测到的模型包围盒（后备方案：当 modelTransform 为 null 时使用）
   const [detectedTransform, setDetectedTransform] = useState(null);
@@ -809,6 +946,70 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
     }
   };
 
+  // 画布单击：射线到穴位点的距离检测，解决小穴位难以点中的问题
+  const handleCanvasClick = (e) => {
+    if (!cameraRef.current) return;
+    // 如果是拖拽产生的点击（移动了一定距离）则忽略
+    if (e.button !== undefined && e.detail === 0) return;
+    const nativeEvent = e.nativeEvent || e;
+    const rect = (nativeEvent.currentTarget && nativeEvent.currentTarget.getBoundingClientRect)
+      ? nativeEvent.currentTarget.getBoundingClientRect()
+      : (nativeEvent.target && nativeEvent.target.getBoundingClientRect
+          ? nativeEvent.target.getBoundingClientRect()
+          : null);
+    if (!rect) return;
+    const mouse = new THREE.Vector2(
+      ((nativeEvent.clientX - rect.left) / rect.width) * 2 - 1,
+      -((nativeEvent.clientY - rect.top) / rect.height) * 2 + 1
+    );
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, cameraRef.current);
+
+    // 射线到穴位的距离检测 —— 找到射线最近且距离足够近的穴位
+    let nearest = null;
+    let minDist = Infinity;
+    const rayDir = raycaster.ray.direction.clone().normalize();
+    const origin = raycaster.ray.origin.clone();
+    const hitThreshold = 0.18; // 点击容差，越大越容易点中
+
+    for (const p of filteredAcupoints) {
+      const pt = new THREE.Vector3(p.position.x, p.position.y, p.position.z);
+      const toPt = pt.clone().sub(origin);
+      const t = toPt.dot(rayDir);
+      if (t < 0) continue;
+      const proj = origin.clone().add(rayDir.clone().multiplyScalar(t));
+      const dist = proj.distanceTo(pt);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = { point: p, t, dist };
+      }
+    }
+
+    if (nearest && minDist < hitThreshold) {
+      handleSelectAcupoint(nearest.point);
+    } else {
+      setSelectedAcupoint(null);
+      setActiveRegion(null);
+    }
+  };
+
+  // 应用缩放比例：百分比形式，100% = 默认距离
+  const applyZoomScale = (percent) => {
+    setZoomScale(percent);
+    if (!cameraRef.current || !controlsRef.current) return;
+    const target = controlsRef.current.target;
+    const cam = cameraRef.current;
+    const dir = new THREE.Vector3().subVectors(cam.position, target);
+    const baseDist = 3.2;
+    const newDist = (baseDist * 100) / percent;
+    const normalizedDir = dir.clone().normalize();
+    const newPos = target.clone().add(normalizedDir.multiplyScalar(newDist));
+    cam.position.copy(newPos);
+    cam.lookAt(target);
+    controlsRef.current.update();
+    setCameraPositionState({ x: newPos.x, y: newPos.y, z: newPos.z });
+  };
+
   const handleMeridianFilter = (value) => {
     setFilterMeridian(value);
     filterAcupoints(searchKeyword, value, activeView, transformedAcupoints);
@@ -890,6 +1091,7 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
     const preset = VIEW_PRESETS[key];
     if (!preset) return;
     setPresetView(key);
+    setZoomScale(100);
     if (!cameraRef.current || !controlsRef.current) {
       setTimeout(() => applyPresetView(key), 80);
       return;
@@ -1105,7 +1307,7 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
       </div>
 
       {/* 搜索和筛选 */}
-      <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: 14 }}>
+      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: 14 } }}>
         <Space size="middle" wrap style={{ width: '100%' }} align="center">
           <div style={{ position: 'relative' }}>
             <Input
@@ -1291,6 +1493,7 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
               gl={{ antialias: true, alpha: true }}
               style={{ width: '100%', height: '100%' }}
               onPointerMissed={() => setSelectedAcupoint(null)}
+              onClick={(e) => handleCanvasClick(e)}
               onDoubleClick={(e) => handleCanvasDoubleClick(e.nativeEvent)}
             >
               <ambientLight intensity={0.6} />
@@ -1329,7 +1532,19 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
                     didInitRef.current = true;
                   }
                 }}
+                onZoomChange={handleWheelZoomSync}
               />
+
+              {/* 每帧同步相机距离 → zoomScale 显示 */}
+              <CameraZoomSync targetRef={controlsRef} onZoom={(p) => {
+                const clamped = Math.max(25, Math.min(ZOOM_CLAMP_MAX, p));
+                setZoomScale(clamped);
+              }} />
+
+              {/* 每帧同步相机朝向 → 当前视角按钮高亮 */}
+              <CameraOrientationSync targetRef={controlsRef} onOrientation={(ori) => {
+                setPresetView((prev) => (prev === ori ? prev : ori));
+              }} />
             </Canvas>
 
             {/* 穴位信息面板 */}
@@ -1394,7 +1609,7 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
                 }
                 size="small"
                 style={{ width: 190, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-                bodyStyle={{ padding: 8 }}
+                styles={{ body: { padding: 8 } }}
               >
                 <div className="scrollbar-hidden" style={{ fontSize: 11, lineHeight: 1.9, maxHeight: 220, overflow: 'auto', scrollbarWidth: 'none' }}>
                   {Object.entries(meridianColors).map(([name, color]) => {
@@ -1492,11 +1707,11 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
                   </Button>
                 }
                 style={{
-                  width: 156,
+                  width: 170,
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   borderRadius: 12,
                 }}
-                bodyStyle={{ padding: 8 }}
+                styles={{ body: { padding: 8 } }}
               >
                 <div
                   style={{
@@ -1529,6 +1744,59 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
                 </div>
               </Card>
             </div>
+
+            {/* 缩放比例：底部水平居中一行显示（百分比形式） */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 16,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 10,
+                background: 'rgba(255,255,255,0.92)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid #D9E5DD',
+                borderRadius: 24,
+                padding: '5px 12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                fontSize: 12,
+                color: '#1F6F52',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                maxWidth: 'calc(100% - 80px)',
+                flexWrap: 'nowrap',
+              }}
+            >
+              <span style={{ color: '#1F6F52', fontWeight: 600, paddingRight: 4, borderRight: '1px solid #D9E5DD', marginRight: 4 }}>缩放</span>
+              {ZOOM_OPTIONS.map((opt) => (
+                <span
+                  key={opt}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => applyZoomScale(opt)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') applyZoomScale(opt);
+                  }}
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    lineHeight: 1.2,
+                    transition: 'all 0.15s ease',
+                    background: zoomScale === opt ? '#1F6F52' : 'transparent',
+                    color: zoomScale === opt ? '#fff' : '#1F6F52',
+                    fontWeight: zoomScale === opt ? 600 : 400,
+                    userSelect: 'none',
+                  }}
+                >
+                  {opt}%
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -1542,7 +1810,7 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
             </Space>
           }
           style={{ width: 320, flexShrink: 0 }}
-          bodyStyle={{ padding: '12px 16px', maxHeight: 650, overflow: 'auto' }}
+          styles={{ body: { padding: '12px 16px', maxHeight: 650, overflow: 'auto' } }}
         >
           <List
             size="small"
