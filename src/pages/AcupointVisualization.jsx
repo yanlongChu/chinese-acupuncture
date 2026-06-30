@@ -349,168 +349,86 @@ function AcupointMarker({ acupoint, isSelected, onClick, onDoubleClick, cameraPo
 function CameraTracker({ onUpdate }) {
   const { camera } = useThree();
   const lastRef = useRef({ x: 0, y: 0, z: 0 });
-  useFrame(() => {
+  const accumRef = useRef(0);  // 时间累加：拖动期间节流，避免每帧 setState 卡顿
+  useFrame((_, delta) => {
     const p = camera.position;
     const dx = p.x - lastRef.current.x;
     const dy = p.y - lastRef.current.y;
     const dz = p.z - lastRef.current.z;
     const dist2 = dx * dx + dy * dy + dz * dz;
-    // 只在相机发生明显位移时才通知 React（避免每帧 setState 性能损耗）
-    if (dist2 > 0.0004) {
-      lastRef.current = { x: p.x, y: p.y, z: p.z };
-      onUpdate({ x: p.x, y: p.y, z: p.z });
-    }
+    // 只在相机发生明显位移时才考虑通知（避免静止时每帧 setState）
+    if (dist2 <= 0.0004) return;
+    // 拖动期间进一步节流：最多每 80ms 回传一次，361 个标签重算不会拖垮帧率
+    accumRef.current += delta;
+    if (accumRef.current < 0.08) return;
+    accumRef.current = 0;
+    lastRef.current = { x: p.x, y: p.y, z: p.z };
+    onUpdate({ x: p.x, y: p.y, z: p.z });
   });
   return null;
 }
 
-// 智能交互控制器：
-// - 右键完全禁用
-// - 左键拖动：
-//     * 模型全可见（相机距离较远）→ 围绕 target 旋转
-//     * 模型放大后（相机距离较近）→ 平移视角（朝拖动方向平移）
-// - 滚轮：向上滚放大、向下滚缩小
-function SmartSceneController({ controlsRef, onCameraAvailable, onZoomChange }) {
-  const { camera, gl, size } = useThree();
+// 智能交互控制器：基于 drei OrbitControls，提供流畅的标准化相机交互
+// - 左键拖动：围绕 target 旋转（永远旋转，不再按距离切换模式，手感统一）
+// - 右键拖动：平移视角（target 与相机同步移动，朝拖动方向平移）
+// - 滚轮：向上滚放大、向下滚缩小（仅改变相机距离，target 不漂移）
+// - 启用阻尼（damping）：拖动松手后有惯性，过渡更顺滑
+function SmartSceneController({ controlsRef, onCameraAvailable }) {
+  const { camera, gl } = useThree();
+
+  // OrbitControls 实例 ref（用于把控件对象回传给父组件）
+  const innerRef = useRef(null);
 
   // 把 camera 暴露出去
   useEffect(() => {
     if (onCameraAvailable) onCameraAvailable(camera);
   }, [camera, onCameraAvailable]);
 
-  // 拖动状态
-  const dragRef = useRef({
-    active: false,
-    mode: null,
-    lastX: 0,
-    lastY: 0,
-  });
-
-  // 阈值：相机距离 target > 该值 → 视为"全可见"→ 旋转模式
-  const VISIBLE_DISTANCE_THRESHOLD = 2.5;
-
+  // 禁用右键菜单（避免平移时弹出浏览器上下文菜单）
   useEffect(() => {
     const canvas = gl.domElement;
     if (!canvas) return;
-    const controls = controlsRef.current;
-    if (!controls) return;
-
     const onContextMenu = (e) => e.preventDefault();
-
-    const onPointerDown = (e) => {
-      if (e.button !== 0) return; // 仅左键
-
-      const dist = camera.position.distanceTo(controls.target);
-      const mode = dist > VISIBLE_DISTANCE_THRESHOLD ? 'rotate' : 'pan';
-
-      dragRef.current = {
-        active: true,
-        mode,
-        lastX: e.clientX,
-        lastY: e.clientY,
-      };
-    };
-
-    const onPointerMove = (e) => {
-      const d = dragRef.current;
-      if (!d.active) return;
-
-      const dx = e.clientX - d.lastX;
-      const dy = e.clientY - d.lastY;
-      d.lastX = e.clientX;
-      d.lastY = e.clientY;
-
-      if (d.mode === 'rotate') {
-        // 旋转模式：绕 target 旋转相机
-        const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
-        const spherical = new THREE.Spherical().setFromVector3(offset);
-
-        const ROT_SPEED = 0.005;
-        spherical.theta -= dx * ROT_SPEED;
-        spherical.phi -= dy * ROT_SPEED;
-        const EPS = 0.01;
-        spherical.phi = Math.max(EPS, Math.min(Math.PI - EPS, spherical.phi));
-
-        const newOffset = new THREE.Vector3().setFromSpherical(spherical);
-        camera.position.copy(controls.target).add(newOffset);
-        camera.lookAt(controls.target);
-      } else {
-        // 平移模式：把屏幕像素位移投影到相机前方平面
-        const distance = camera.position.distanceTo(controls.target);
-        const vFov = (camera.fov * Math.PI) / 180;
-        const height = size.height;
-        const worldPerPixel = (2 * Math.tan(vFov / 2) * distance) / height;
-
-        // 相机 right 向量
-        const right = new THREE.Vector3();
-        camera.matrixWorld.extractBasis(right, new THREE.Vector3(), new THREE.Vector3());
-        // 相机 up 向量（世界空间，由 camera.up 经过矩阵变换后得到）
-        const worldUp = camera.up.clone().applyMatrix4(camera.matrixWorld).normalize();
-
-        const deltaRight = right.multiplyScalar(-dx * worldPerPixel);
-        const deltaUp = worldUp.multiplyScalar(dy * worldPerPixel);
-        const delta = deltaRight.add(deltaUp);
-
-        camera.position.add(delta);
-        controls.target.add(delta);
-      }
-    };
-
-    const onPointerUp = () => {
-      dragRef.current.active = false;
-      dragRef.current.mode = null;
-    };
-
-    const onWheel = (event) => {
-      event.preventDefault();
-
-      const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
-
-      const currentDist = camera.position.distanceTo(controls.target);
-      const moveDist = -event.deltaY * 0.0018 * currentDist;
-
-      if (Math.abs(moveDist) < 1e-5) return;
-
-      // 仅移动相机（不移动 target）以实现真正的缩放
-      // 同时把 target 朝相机方向跟进一点，保持近距离时的"平移模式"手感
-      const targetFollowRatio = 0.25;
-      const camMove = forward.clone().multiplyScalar(moveDist);
-      const targetMove = forward.clone().multiplyScalar(moveDist * targetFollowRatio);
-      const newCam = camera.position.clone().add(camMove);
-      const newTarget = controls.target.clone().add(targetMove);
-      const newDist = newCam.distanceTo(newTarget);
-
-      // 距离范围：0.3~12，对应百分比约 27~1067%
-      if (newDist < 0.3 || newDist > 12) return;
-
-      camera.position.copy(newCam);
-      controls.target.copy(newTarget);
-      camera.lookAt(controls.target);
-
-      // 同步更新缩放比例：基于标准 3.2 距离反算百分比
-      if (onZoomChange) {
-        const percent = Math.round((3.2 * 100) / newDist);
-        onZoomChange(percent);
-      }
-    };
-
     canvas.addEventListener('contextmenu', onContextMenu);
-    canvas.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('contextmenu', onContextMenu);
+  }, [gl]);
 
-    return () => {
-      canvas.removeEventListener('contextmenu', onContextMenu);
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      canvas.removeEventListener('wheel', onWheel);
-    };
-  }, [camera, gl, size, controlsRef, onZoomChange]);
-
-  return null;
+  return (
+    <OrbitControls
+      ref={(c) => {
+        innerRef.current = c;
+        if (controlsRef) controlsRef.current = c;
+      }}
+      // 旋转配置：左键旋转
+      mouseButtons={{
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN,
+      }}
+      // 触摸：单指旋转、双指缩放/平移
+      touches={{
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN,
+      }}
+      // 阻尼：松手后平滑减速，过渡顺滑
+      enableDamping
+      dampingFactor={0.08}
+      // 旋转灵敏度（默认 1，略降到 0.8 让大模型旋转更稳）
+      rotateSpeed={0.8}
+      // 平移灵敏度
+      panSpeed={0.8}
+      // 缩放灵敏度（默认 1，降到 0.8 让滚轮放大更可控）
+      zoomSpeed={0.8}
+      // 缩放范围：与原实现一致 0.3~12（对应 27%~1067%）
+      minDistance={0.3}
+      maxDistance={12}
+      // 限制垂直旋转角度，避免翻到模型下方看穿
+      maxPolarAngle={Math.PI * 0.92}
+      // 缩放时 target 保持不动（真正的缩放，而非位移）
+      enablePan
+      makeDefault
+    />
+  );
 }
 
 // 预加载模型渲染组件，在挂载后自动测量包围盒
@@ -649,12 +567,13 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef(null);
   const cameraRef = useRef();
-  const controlsRef = useRef({
-    target: new THREE.Vector3(0, 0.5, 0),
-    update: () => {},
-    reset: () => {},
-  });
+  // OrbitControls 实例占位：初始为 null，由 SmartSceneController 在挂载后填充。
+  // 各聚焦函数都会判空并 setTimeout 重试，确保拿到真实控件后再操作相机。
+  const controlsRef = useRef(null);
   const didInitRef = useRef(false);  // 防止子组件 remount 时把相机重置
+  // 拖拽判定：记录 pointerdown 起点与累计位移，区分"点击"与"拖动"，避免拖动末尾误触发选中
+  const pointerDownRef = useRef(null);  // { x, y, moved }
+  const DRAG_THRESHOLD = 5;  // 像素位移超过该值视为拖动，click 不再选中穴位
   const searchDebounceRef = useRef(null);  // 搜索防抖定时器
   const canvasWrapperRef = useRef(null);   // 3D画布容器引用，用于恢复原始尺寸
   const prevCanvasSizeRef = useRef(null);  // 保存全屏前的尺寸
@@ -663,28 +582,6 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
   const [zoomScale, setZoomScale] = useState(100);
   const ZOOM_OPTIONS = [50, 75, 100, 125, 150, 200, 250, 300, 400, 500];
   const ZOOM_CLAMP_MAX = 500;  // 与最大档位一致
-  const zoomSyncRef = useRef(null);
-
-  // 滚轮缩放时同步更新显示的缩放比例（取最近的档位 + 平滑节流）
-  const handleWheelZoomSync = (percent) => {
-    // 限制在 25 ~ ZOOM_CLAMP_MAX 之间
-    const clamped = Math.max(25, Math.min(ZOOM_CLAMP_MAX, percent));
-    // 清掉上一次的定时更新
-    if (zoomSyncRef.current) {
-      clearTimeout(zoomSyncRef.current);
-      zoomSyncRef.current = null;
-    }
-    // 立即（同步）显示一个"近似"百分比，提供即时反馈
-    setZoomScale(clamped);
-    // 120ms 后把显示百分比对齐到最近的档位，避免抖动
-    zoomSyncRef.current = setTimeout(() => {
-      const nearest = ZOOM_OPTIONS.reduce((prev, curr) =>
-        Math.abs(curr - clamped) < Math.abs(prev - clamped) ? curr : prev
-      , ZOOM_OPTIONS[0]);
-      setZoomScale(nearest);
-      zoomSyncRef.current = null;
-    }, 120);
-  };
 
   // 自己检测到的模型包围盒（后备方案：当 modelTransform 为 null 时使用）
   const [detectedTransform, setDetectedTransform] = useState(null);
@@ -860,6 +757,8 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
   // 画布空白处双击：把双击位置作为新的焦点并按合理比例放大
   const handleCanvasDoubleClick = (e) => {
     if (!cameraRef.current || !controlsRef.current) return;
+    // 拖动产生的双击不聚焦（避免旋转后误放大）
+    if (pointerDownRef.current && pointerDownRef.current.moved) return;
     // 使用鼠标位置反投影到世界坐标
     const rect = e.currentTarget.getBoundingClientRect();
     const mouse = new THREE.Vector2(
@@ -949,8 +848,8 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
   // 画布单击：射线到穴位点的距离检测，解决小穴位难以点中的问题
   const handleCanvasClick = (e) => {
     if (!cameraRef.current) return;
-    // 如果是拖拽产生的点击（移动了一定距离）则忽略
-    if (e.button !== undefined && e.detail === 0) return;
+    // 如果是拖拽产生的点击（累计位移超过阈值）则忽略，避免旋转/平移末尾误选穴位
+    if (pointerDownRef.current && pointerDownRef.current.moved) return;
     const nativeEvent = e.nativeEvent || e;
     const rect = (nativeEvent.currentTarget && nativeEvent.currentTarget.getBoundingClientRect)
       ? nativeEvent.currentTarget.getBoundingClientRect()
@@ -1493,6 +1392,24 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
               gl={{ antialias: true, alpha: true }}
               style={{ width: '100%', height: '100%' }}
               onPointerMissed={() => setSelectedAcupoint(null)}
+              onPointerDown={(e) => {
+                const ne = e.nativeEvent || e;
+                pointerDownRef.current = { x: ne.clientX, y: ne.clientY, moved: false };
+              }}
+              onPointerMove={(e) => {
+                const d = pointerDownRef.current;
+                if (!d) return;
+                const ne = e.nativeEvent || e;
+                const dx = ne.clientX - d.x;
+                const dy = ne.clientY - d.y;
+                if (dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) d.moved = true;
+              }}
+              onPointerUp={() => {
+                // 保留 moved 标记，让随后的 click 处理判断；下一轮 pointerdown 重置
+                setTimeout(() => {
+                  if (pointerDownRef.current) pointerDownRef.current.moved = false;
+                }, 0);
+              }}
               onClick={(e) => handleCanvasClick(e)}
               onDoubleClick={(e) => handleCanvasDoubleClick(e.nativeEvent)}
             >
@@ -1532,7 +1449,6 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
                     didInitRef.current = true;
                   }
                 }}
-                onZoomChange={handleWheelZoomSync}
               />
 
               {/* 每帧同步相机距离 → zoomScale 显示 */}

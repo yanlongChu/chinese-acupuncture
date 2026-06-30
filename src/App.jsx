@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import QASystem from './pages/QASystem';
 import AcupointVisualization from './pages/AcupointVisualization';
 import KnowledgeBase from './pages/KnowledgeBase';
@@ -32,9 +33,16 @@ function App() {
     let cancelled = false;
     let lastPercent = -1;
     const loader = new GLTFLoader();
+    // DRACO 解码器：用于加载 DRACO 压缩后的 glb（体积约原 1/5）
+    // 解码器 wasm 放在 public/draco/，与 three 自带版本一致
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('/draco/');
+    dracoLoader.setDecoderConfig({ type: 'wasm' });
+    dracoLoader.preload();
+    loader.setDRACOLoader(dracoLoader);
 
     loader.load(
-      '/acupuncture.glb',
+      '/acupuncture.draco.glb',
       (gltf) => {
         if (cancelled) return;
         const loadedScene = gltf.scene;
@@ -85,7 +93,10 @@ function App() {
       }
     );
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      dracoLoader.dispose();
+    };
   }, []);
 
   const menuItems = [
