@@ -419,8 +419,8 @@ function SmartSceneController({ controlsRef, onCameraAvailable }) {
       panSpeed={0.8}
       // 缩放灵敏度（默认 1，降到 0.8 让滚轮放大更可控）
       zoomSpeed={0.8}
-      // 缩放范围：与原实现一致 0.3~12（对应 27%~1067%）
-      minDistance={0.3}
+      // 缩放范围：0.64~12（对应 25%~500%），与 UI 档位一致
+      minDistance={0.64}
       maxDistance={12}
       // 限制垂直旋转角度，避免翻到模型下方看穿
       maxPolarAngle={Math.PI * 0.92}
@@ -475,25 +475,23 @@ function PreloadedModel({ scene, onMeasure, measuredRef }) {
   );
 }
 
-// 相机距离同步组件：每帧把相机距离映射为百分比，可靠同步 UI
+// 相机距离同步组件：每帧把相机距离映射为百分比，实时同步 UI
 function CameraZoomSync({ targetRef, onZoom }) {
   const { camera } = useThree();
   const lastPercentRef = useRef(-1);
-  const throttleRef = useRef(0);
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     if (!targetRef || !targetRef.current) return;
     const target = targetRef.current.target || targetRef.current;
+    if (!target || typeof target.x !== 'number') return;
     const dist = camera.position.distanceTo(target);
     if (!isFinite(dist) || dist < 0.01) return;
     const percent = Math.round((3.2 * 100) / dist);
-    if (percent === lastPercentRef.current) return;
-    lastPercentRef.current = percent;
-    // 节流：每 60ms 最多一次回调，避免频繁 setState
-    throttleRef.current += delta;
-    if (throttleRef.current < 0.06) return;
-    throttleRef.current = 0;
-    if (onZoom) onZoom(percent);
+    // 只有百分比变化时才触发回调，React 会自动处理相同值的 setState
+    if (percent !== lastPercentRef.current) {
+      lastPercentRef.current = percent;
+      if (onZoom) onZoom(percent);
+    }
   });
 
   return null;
@@ -1686,32 +1684,40 @@ const AcupointVisualization = ({ highlightAcupoint, onReady, preloadedScene, mod
                 flexWrap: 'nowrap',
               }}
             >
-              <span style={{ color: '#1F6F52', fontWeight: 600, paddingRight: 4, borderRight: '1px solid #D9E5DD', marginRight: 4 }}>缩放</span>
-              {ZOOM_OPTIONS.map((opt) => (
-                <span
-                  key={opt}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => applyZoomScale(opt)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') applyZoomScale(opt);
-                  }}
-                  style={{
-                    padding: '2px 6px',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                    fontSize: 11,
-                    lineHeight: 1.2,
-                    transition: 'all 0.15s ease',
-                    background: zoomScale === opt ? '#1F6F52' : 'transparent',
-                    color: zoomScale === opt ? '#fff' : '#1F6F52',
-                    fontWeight: zoomScale === opt ? 600 : 400,
-                    userSelect: 'none',
-                  }}
-                >
-                  {opt}%
-                </span>
-              ))}
+              <span style={{ color: '#1F6F52', fontWeight: 600, paddingRight: 4, borderRight: '1px solid #D9E5DD', marginRight: 4 }}>
+                缩放
+              </span>
+              {/* 就近匹配：找到距离当前百分比最近的档位来高亮 */}
+              {(() => {
+                const nearest = ZOOM_OPTIONS.reduce((prev, curr) =>
+                  Math.abs(curr - zoomScale) < Math.abs(prev - zoomScale) ? curr : prev
+                , ZOOM_OPTIONS[0]);
+                return ZOOM_OPTIONS.map((opt) => (
+                  <span
+                    key={opt}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => applyZoomScale(opt)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') applyZoomScale(opt);
+                    }}
+                    style={{
+                      padding: '2px 6px',
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                      fontSize: 11,
+                      lineHeight: 1.2,
+                      transition: 'all 0.15s ease',
+                      background: nearest === opt ? '#1F6F52' : 'transparent',
+                      color: nearest === opt ? '#fff' : '#1F6F52',
+                      fontWeight: nearest === opt ? 600 : 400,
+                      userSelect: 'none',
+                    }}
+                  >
+                    {opt}%
+                  </span>
+                ));
+              })()}
             </div>
           </div>
         </div>
