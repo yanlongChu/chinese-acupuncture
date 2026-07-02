@@ -6,7 +6,9 @@ import {
   Avatar,
   Tooltip,
   message,
-  Empty
+  Empty,
+  Divider,
+  Space
 } from 'antd';
 import {
   SendOutlined,
@@ -17,10 +19,14 @@ import {
   UserOutlined,
   MedicineBoxOutlined,
   ExperimentOutlined,
-  SearchOutlined
+  SearchOutlined,
+  ApartmentOutlined,
+  BookOutlined,
+  LinkOutlined
 } from '@ant-design/icons';
 import { qaData as initialQaData } from '../data/mockData';
-import { allAcupoints } from '../data/acupoints361';
+import { allAcupoints, acupointsByMeridian, meridianList } from '../data/acupoints361';
+import { compatibilityData, techniqueData } from '../data/knowledgeData';
 
 const { TextArea } = Input;
 
@@ -88,30 +94,69 @@ const renderContentWithAcupointLinks = (content, onAcupointClick) => {
   });
 };
 
-// 模拟AI回答
+// 模拟AI回答 - 包含知识图谱绘制和知识库溯源
 const aiAnswers = {
-  '头痛': '根据您的症状描述，头痛伴有眩晕可能与肝阳上亢或气血不足有关。\n\n**推荐穴位：**\n• **百会穴** — 位于头顶正中，可升阳举陷、醒脑开窍\n• **太阳穴** — 额部两侧凹陷处，疏风止痛\n• **风池穴** — 颈后发际两侧，祛风解表\n\n**建议方法：** 艾灸百会穴15-20分钟，配合按揉太阳穴和风池穴各3分钟。每日1次，连续5-7天可见效。\n\n️ 如症状持续或加重，建议及时就医。',
-  '失眠': '失眠多梦多与心脾两虚或心肾不交有关。\n\n**推荐穴位：**\n• **神门穴** — 心经原穴，宁心安神\n• **三阴交** — 肝脾肾三经交会，调理气血\n• **内关穴** — 理气安神\n• **涌泉穴** — 引火归元，配合艾灸效果更佳\n\n**建议方法：** 睡前2小时针刺或按揉上述穴位，每穴3-5分钟。可配合温水泡脚15分钟。\n\n💡 建议保持规律作息，避免睡前使用电子产品。',
-  '腰痛': '腰痛可能由寒湿、湿热、肾虚或瘀血引起。\n\n**推荐穴位：**\n• **肾俞穴** — 腰部第二腰椎旁开1.5寸，主治腰痛\n• **腰阳关** — 腰部正中，温阳散寒\n• **委中穴** — 窝正中，"腰背委中求"\n• **承山穴** — 小腿后侧，舒筋活络\n\n**建议方法：** 可针刺配合艾灸，每次20-30分钟。寒湿型可加灸命门穴。\n\n⚠️ 避免久坐久站，注意腰部保暖。',
-  '胃胀': '胃胀气、消化不良多与脾胃虚弱或肝气犯胃有关。\n\n**推荐穴位：**\n• **中脘穴** — 胃之募穴，上腹部正中，主治胃病\n• **足三里** — 强壮穴，健脾和胃\n• **天枢穴** — 调理肠胃气机\n• **内关穴** — 和胃降逆\n\n**建议方法：** 可采用温针灸或艾灸，中脘穴灸15分钟，足三里灸10分钟。饭后1小时进行效果最佳。\n\n 饮食宜清淡，避免生冷油腻食物。',
-  'default': '感谢您的提问。根据中医针灸理论，我为您分析如下：\n\n**辨证分析：** 需要结合您的具体症状、舌象、脉象等进行综合判断。\n\n**建议方案：** 建议您前往正规中医医院进行面诊，由专业医师根据您的体质和病情制定个性化的针灸治疗方案。\n\n**常用保健穴位：**\n• 足三里 — 强身健体\n• 三阴交 — 调理气血\n• 合谷穴 — 止痛通络\n\n⚠️ 针灸治疗需在专业医师指导下进行，请勿自行操作。'
+  '头痛': {
+    content: '根据您的症状描述，头痛伴有眩晕可能与肝阳上亢或气血不足有关。\n\n**推荐穴位：**\n• **百会穴** — 位于头顶正中，可升阳举陷、醒脑开窍\n• **太阳穴** — 额部两侧凹陷处，疏风止痛\n• **风池穴** — 颈后发际两侧，祛风解表\n\n**建议方法：** 艾灸百会穴15-20分钟，配合按揉太阳穴和风池穴各3分钟。每日1次，连续5-7天可见效。',
+    graphType: 'meridian',
+    graphNodes: ['百会', '太阳', '风池'],
+    sources: [
+      { type: 'meridian', name: '百会', code: 'GV20', label: '穴位详情' },
+      { type: 'compat', name: '风寒外感头痛', id: 1, label: '配伍方案' }
+    ]
+  },
+  '失眠': {
+    content: '失眠多梦多与心脾两虚或心肾不交有关。\n\n**推荐穴位：**\n• **神门穴** — 心经原穴，宁心安神\n• **三阴交** — 肝脾肾三经交会，调理气血\n• **内关穴** — 理气安神\n• **涌泉穴** — 引火归元，配合艾灸效果更佳\n\n**建议方法：** 睡前2小时针刺或按揉上述穴位，每穴3-5分钟。可配合温水泡脚15分钟。',
+    graphType: 'meridian',
+    graphNodes: ['神门', '三阴交', '内关', '涌泉'],
+    sources: [
+      { type: 'meridian', name: '神门', code: 'HT7', label: '穴位详情' },
+      { type: 'compat', name: '失眠（心脾两虚）', id: 8, label: '配伍方案' }
+    ]
+  },
+  '腰痛': {
+    content: '腰痛可能由寒湿、湿热、肾虚或瘀血引起。\n\n**推荐穴位：**\n• **肾俞穴** — 腰部第二腰椎旁开1.5寸，主治腰痛\n• **腰阳关** — 腰部正中，温阳散寒\n• **委中穴** — 窝正中，"腰背委中求"\n• **承山穴** — 小腿后侧，舒筋活络\n\n**建议方法：** 可针刺配合艾灸，每次20-30分钟。寒湿型可加灸命门穴。',
+    graphType: 'meridian',
+    graphNodes: ['肾俞', '腰阳关', '委中', '承山'],
+    sources: [
+      { type: 'meridian', name: '肾俞', code: 'BL23', label: '穴位详情' },
+      { type: 'compat', name: '腰痛（寒湿型）', id: 17, label: '配伍方案' }
+    ]
+  },
+  '胃胀': {
+    content: '胃胀气、消化不良多与脾胃虚弱或肝气犯胃有关。\n\n**推荐穴位：**\n• **中脘穴** — 胃之募穴，上腹部正中，主治胃病\n• **足三里** — 强壮穴，健脾和胃\n• **天枢穴** — 调理肠胃气机\n• **内关穴** — 和胃降逆\n\n**建议方法：** 可采用温针灸或艾灸，中脘穴灸15分钟，足三里灸10分钟。饭后1小时进行效果最佳。',
+    graphType: 'meridian',
+    graphNodes: ['中脘', '足三里', '天枢', '内关'],
+    sources: [
+      { type: 'meridian', name: '足三里', code: 'ST36', label: '穴位详情' },
+      { type: 'compat', name: '慢性胃炎', id: 13, label: '配伍方案' },
+      { type: 'technique', name: '艾灸疗法', code: 'TC-004', label: '技法详情' }
+    ]
+  },
+  'default': {
+    content: '感谢您的提问。根据中医针灸理论，我为您分析如下：\n\n**辨证分析：** 需要结合您的具体症状、舌象、脉象等进行综合判断。\n\n**建议方案：** 建议您前往正规中医医院进行面诊，由专业医师根据您的体质和病情制定个性化的针灸治疗方案。\n\n**常用保健穴位：**\n• 足三里 — 强身健体\n• 三阴交 — 调理气血\n• 合谷穴 — 止痛通络',
+    graphType: 'meridian',
+    graphNodes: ['足三里', '三阴交', '合谷'],
+    sources: [
+      { type: 'meridian', name: '足三里', code: 'ST36', label: '穴位详情' }
+    ]
+  }
 };
 
-const QASystem = ({ onNavigateToVisualization }) => {
+const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => {
   const [conversations, setConversations] = useState(
     initialQaData.map(q => ({
       id: q.id,
       title: q.question.length > 20 ? q.question.substring(0, 20) + '...' : q.question,
       messages: [
         { role: 'user', content: q.question, time: q.createTime },
-        ...(q.status === 'answered' ? [{ role: 'ai', content: q.answer, time: q.updateTime }] : [])
+        ...(q.status === 'answered' ? [{ role: 'ai', content: q.answer, time: q.updateTime, graphType: 'meridian', sources: [] }] : [])
       ],
       createTime: q.createTime
     }))
   );
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [inputValue, setInputValue] = useState('');
-  const [activeMode, setActiveMode] = useState('acupoint');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -163,7 +208,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
     }
   };
 
-  // 获取AI回答
+  // 获取AI回答 - 返回包含图谱信息的完整响应
   const getAIResponse = (userInput) => {
     for (const [keyword, answer] of Object.entries(aiAnswers)) {
       if (keyword !== 'default' && userInput.includes(keyword)) {
@@ -221,7 +266,14 @@ const QASystem = ({ onNavigateToVisualization }) => {
 
       setConversations(prev => prev.map(c =>
         c.id === targetId
-          ? { ...c, messages: [...c.messages, { role: 'ai', content: aiResponse, time: aiTime }] }
+          ? { ...c, messages: [...c.messages, {
+              role: 'ai',
+              content: aiResponse.content,
+              time: aiTime,
+              graphType: aiResponse.graphType,
+              graphNodes: aiResponse.graphNodes,
+              sources: aiResponse.sources
+            }] }
           : c
       ));
       setIsTyping(false);
@@ -234,14 +286,6 @@ const QASystem = ({ onNavigateToVisualization }) => {
       handleSend();
     }
   };
-
-  const modes = [
-    { key: 'acupoint', label: '穴位经络', icon: <MedicineBoxOutlined />, desc: '查询穴位定位、归经、功效与经络循行' },
-    { key: 'compat', label: '辨证配穴', icon: <ExperimentOutlined />, desc: '针对症状给出针灸方案与配穴建议' },
-    { key: 'technique', label: '技法与安全', icon: <SearchOutlined />, desc: '针法灸法操作规范与安全禁忌说明' },
-  ];
-
-  const currentMode = modes.find(m => m.key === activeMode);
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 140px)', gap: 20, background: 'transparent' }}>
@@ -394,6 +438,121 @@ const QASystem = ({ onNavigateToVisualization }) => {
                         : msg.content
                       }
                     </div>
+                    {/* 知识图谱绘制和知识库溯源 */}
+                    {msg.role === 'ai' && msg.graphNodes && msg.graphNodes.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <Divider style={{ margin: '8px 0', borderColor: '#D5D8D3' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <ApartmentOutlined style={{ color: '#1F6F52', fontSize: 14 }} />
+                          <span style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600 }}>知识图谱绘制</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {msg.graphNodes.map((node, i) => (
+                            <Tag
+                              key={i}
+                              style={{
+                                cursor: 'pointer',
+                                borderRadius: 16,
+                                background: '#F2F7F3',
+                                color: '#1F6F52',
+                                border: '1px solid #D5D8D3',
+                                fontSize: 12,
+                                padding: '4px 10px'
+                              }}
+                              onClick={() => {
+                                const acupoint = acupointNameMap[node];
+                                if (acupoint && onNavigateToKnowledgeGraph) {
+                                  onNavigateToKnowledgeGraph(acupoint.code, msg.graphType || 'meridian');
+                                }
+                              }}
+                            >
+                              <ApartmentOutlined style={{ marginRight: 4, fontSize: 10 }} />
+                              {node}
+                            </Tag>
+                          ))}
+                          <Tag
+                            style={{
+                              cursor: 'pointer',
+                              borderRadius: 16,
+                              background: '#1F6F52',
+                              color: '#fff',
+                              border: 'none',
+                              fontSize: 12,
+                              padding: '4px 10px'
+                            }}
+                            onClick={() => {
+                              if (onNavigateToKnowledgeGraph) {
+                                onNavigateToKnowledgeGraph(null, msg.graphType || 'meridian');
+                              }
+                            }}
+                          >
+                            <LinkOutlined style={{ marginRight: 4, fontSize: 10 }} />
+                            查看完整图谱
+                          </Tag>
+                        </div>
+                      </div>
+                    )}
+                    {/* 知识库溯源 */}
+                    {msg.role === 'ai' && msg.sources && msg.sources.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <Divider style={{ margin: '8px 0', borderColor: '#D5D8D3' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <BookOutlined style={{ color: '#C58B54', fontSize: 14 }} />
+                          <span style={{ fontSize: 12, color: '#C58B54', fontWeight: 600 }}>知识库溯源</span>
+                        </div>
+                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                          {msg.sources.map((source, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                cursor: 'pointer',
+                                padding: '4px 8px',
+                                borderRadius: 8,
+                                background: '#FAFAF8',
+                                transition: 'all 0.2s'
+                              }}
+                              onClick={() => {
+                                if (source.type === 'meridian' && onNavigateToVisualization) {
+                                  const acupoint = acupointNameMap[source.name];
+                                  if (acupoint) {
+                                    onNavigateToVisualization(acupoint);
+                                  }
+                                } else if (source.type === 'compat' && onNavigateToKnowledgeGraph) {
+                                  onNavigateToKnowledgeGraph(`compat-${source.id}`, 'compatibility');
+                                } else if (source.type === 'technique' && onNavigateToKnowledgeGraph) {
+                                  onNavigateToKnowledgeGraph(source.code, 'technique');
+                                }
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#F2F7F3';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#FAFAF8';
+                              }}
+                            >
+                              <MedicineBoxOutlined style={{ fontSize: 12, color: '#1F6F52' }} />
+                              <span style={{ fontSize: 12, color: '#1f2937' }}>{source.name}</span>
+                              <Tag style={{
+                                fontSize: 10,
+                                background: source.type === 'meridian' ? '#F2F7F3' :
+                                           source.type === 'compat' ? '#FEF3E2' : '#E8F5E9',
+                                color: source.type === 'meridian' ? '#1F6F52' :
+                                       source.type === 'compat' ? '#C58B54' : '#5BAF7D',
+                                border: 'none',
+                                borderRadius: 8,
+                                padding: '0 6px'
+                              }}>
+                                {source.label}
+                              </Tag>
+                              <LinkOutlined style={{ fontSize: 10, color: '#8a8f89' }} />
+                            </div>
+                          ))}
+                        </Space>
+                      </div>
+                    )}
                     <div style={{
                       fontSize: 11,
                       color: msg.role === 'user' ? 'rgba(255,255,255,0.65)' : '#8a8f89',
@@ -456,36 +615,6 @@ const QASystem = ({ onNavigateToVisualization }) => {
                 border: '1px solid #E5E8E3',
                 overflow: 'hidden'
               }}>
-                {/* 模式标签 */}
-                <div style={{
-                  display: 'flex',
-                  gap: 4,
-                  padding: '10px 14px 0',
-                }}>
-                  {modes.map(mode => (
-                    <div
-                      key={mode.key}
-                      onClick={() => setActiveMode(mode.key)}
-                      style={{
-                        padding: '6px 14px',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        color: activeMode === mode.key ? '#1f2937' : '#8a8f89',
-                        background: activeMode === mode.key ? '#ffffff' : 'transparent',
-                        borderRadius: '12px 12px 0 0',
-                        fontWeight: activeMode === mode.key ? 600 : 500,
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }}
-                    >
-                      {mode.icon}
-                      {mode.label}
-                    </div>
-                  ))}
-                </div>
-
                 {/* 输入框 */}
                 <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                   <TextArea
@@ -493,7 +622,7 @@ const QASystem = ({ onNavigateToVisualization }) => {
                     value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={`${currentMode?.label} · 请输入您的中医针灸问题`}
+                    placeholder="请输入您的中医针灸问题"
                     autoSize={{ minRows: 1, maxRows: 4 }}
                     style={{
                       border: 'none',
@@ -578,57 +707,6 @@ const QASystem = ({ onNavigateToVisualization }) => {
               </div>
             </div>
 
-            {/* 模式选择卡片 */}
-            <div style={{
-              display: 'flex',
-              gap: 16,
-              marginTop: 16,
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              maxWidth: 720
-            }}>
-              {modes.map(mode => (
-                <div
-                  key={mode.key}
-                  onClick={() => {
-                    setActiveMode(mode.key);
-                    setTimeout(() => inputRef.current?.focus(), 100);
-                  }}
-                  style={{
-                    width: 160,
-                    padding: '22px 18px',
-                    background: '#ffffff',
-                    borderRadius: 20,
-                    border: '1px solid #EEF0ED',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-                    textAlign: 'center',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 16px 40px rgba(31,111,82,0.08)';
-                    e.currentTarget.style.borderColor = '#1F6F52';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.02)';
-                    e.currentTarget.style.borderColor = '#EEF0ED';
-                  }}
-                >
-                  <div style={{ fontSize: 24, marginBottom: 10, color: '#1F6F52' }}>
-                    {mode.icon}
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937', marginBottom: 6, letterSpacing: '-0.01em' }}>
-                    {mode.label}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#8a8f89', lineHeight: 1.5 }}>
-                    {mode.desc}
-                  </div>
-                </div>
-              ))}
-            </div>
-
             {/* 快捷提问 */}
             <div style={{ marginTop: 24, width: '100%', maxWidth: 620 }}>
               <div style={{ fontSize: 12, color: '#8a8f89', marginBottom: 12, textAlign: 'center', fontWeight: 500, letterSpacing: '0.05em' }}>
@@ -670,43 +748,13 @@ const QASystem = ({ onNavigateToVisualization }) => {
               boxShadow: '0 8px 32px rgba(31,111,82,0.08)',
               overflow: 'hidden'
             }}>
-              {/* 模式标签 */}
-              <div style={{
-                display: 'flex',
-                gap: 4,
-                padding: '12px 14px 0',
-              }}>
-                {modes.map(mode => (
-                  <div
-                    key={mode.key}
-                    onClick={() => setActiveMode(mode.key)}
-                    style={{
-                      padding: '6px 14px',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      color: activeMode === mode.key ? '#1f2937' : '#8a8f89',
-                      background: activeMode === mode.key ? '#F2F4F2' : 'transparent',
-                      borderRadius: '12px 12px 0 0',
-                      fontWeight: activeMode === mode.key ? 600 : 500,
-                      transition: 'all 0.2s',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6
-                    }}
-                  >
-                    {mode.icon}
-                    {mode.label}
-                  </div>
-                ))}
-              </div>
-
               <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                 <TextArea
                   ref={inputRef}
                   value={inputValue}
                   onChange={e => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={`${currentMode?.label} · 请输入您的中医针灸问题`}
+                  placeholder="请输入您的中医针灸问题"
                   autoSize={{ minRows: 1, maxRows: 4 }}
                   style={{
                     border: 'none',

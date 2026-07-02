@@ -6,6 +6,7 @@ import {
   BookOutlined,
   HomeOutlined,
   MedicineBoxOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -13,6 +14,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import QASystem from './pages/QASystem';
 import AcupointVisualization from './pages/AcupointVisualization';
 import KnowledgeBase from './pages/KnowledgeBase';
+import KnowledgeGraph from './pages/KnowledgeGraph';
 import Dashboard from './pages/Dashboard';
 import ShichenTip from './pages/ShichenTip';
 import './App.css';
@@ -120,11 +122,26 @@ function App() {
       icon: <BookOutlined />,
       label: '知识库',
     },
+    {
+      key: 'knowledgeGraph',
+      icon: <ApartmentOutlined />,
+      label: '知识关系图谱',
+    },
   ];
 
   const handleNavigateToVisualization = (acupoint) => {
     setHighlightAcupoint(acupoint);
     setSelectedMenu('visualization');
+  };
+
+  // 导航到知识图谱并定位特定节点
+  const [highlightGraphNode, setHighlightGraphNode] = useState(null);
+  const [defaultGraphTab, setDefaultGraphTab] = useState('meridian');
+
+  const handleNavigateToKnowledgeGraph = (nodeId, tab) => {
+    setHighlightGraphNode(nodeId);
+    setDefaultGraphTab(tab);
+    setSelectedMenu('knowledgeGraph');
   };
 
   const handleMenuClick = ({ key }) => {
@@ -142,7 +159,10 @@ function App() {
           <Dashboard onNavigate={setSelectedMenu} />
         </div>
         <div style={{ display: selectedMenu === 'qa' ? 'block' : 'none' }}>
-          <QASystem onNavigateToVisualization={handleNavigateToVisualization} />
+          <QASystem
+            onNavigateToVisualization={handleNavigateToVisualization}
+            onNavigateToKnowledgeGraph={handleNavigateToKnowledgeGraph}
+          />
         </div>
         <div style={{ display: selectedMenu === 'visualization' ? 'block' : 'none' }}>
           <AcupointVisualization
@@ -153,6 +173,12 @@ function App() {
         </div>
         <div style={{ display: selectedMenu === 'knowledge' ? 'block' : 'none' }}>
           <KnowledgeBase />
+        </div>
+        <div style={{ display: selectedMenu === 'knowledgeGraph' ? 'block' : 'none' }}>
+          <KnowledgeGraph
+            highlightNode={highlightGraphNode}
+            defaultTab={defaultGraphTab}
+          />
         </div>
       </>
     );
