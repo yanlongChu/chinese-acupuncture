@@ -18,8 +18,6 @@ import {
   RobotOutlined,
   UserOutlined,
   MedicineBoxOutlined,
-  ExperimentOutlined,
-  SearchOutlined,
   ApartmentOutlined,
   BookOutlined,
   LinkOutlined
@@ -40,28 +38,20 @@ allAcupoints.forEach(a => {
 const renderContentWithAcupointLinks = (content, onAcupointClick) => {
   if (!content) return null;
 
-  // 按穴位名称长度降序排列，优先匹配长名称（如"手三里"优先于"三里"）
   const sortedNames = Object.keys(acupointNameMap).sort((a, b) => b.length - a.length);
-
-  // 构建正则，匹配穴位名称（可选带"穴"后缀）
   const escapedNames = sortedNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const regex = new RegExp(`(${escapedNames.join('|')})穴?`, 'g');
 
   const parts = content.split(regex);
 
-  // 处理markdown格式并渲染穴位链接
   const renderMarkdown = (text) => {
-    // 粗体 **text**
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    // 列表项
     text = text.replace(/•/g, '&bull;');
-    // 换行
     text = text.replace(/\n/g, '<br/>');
     return text;
   };
 
   return parts.map((part, i) => {
-    // 检查是否匹配穴位名称（去掉"穴"后缀）
     const cleanName = part.endsWith('穴') ? part.slice(0, -1) : part;
     if (acupointNameMap[cleanName]) {
       const acupoint = acupointNameMap[cleanName];
@@ -94,7 +84,7 @@ const renderContentWithAcupointLinks = (content, onAcupointClick) => {
   });
 };
 
-// 模拟AI回答 - 包含知识图谱绘制和知识库溯源
+// 模拟AI回答
 const aiAnswers = {
   '头痛': {
     content: '根据您的症状描述，头痛伴有眩晕可能与肝阳上亢或气血不足有关。\n\n**推荐穴位：**\n• **百会穴** — 位于头顶正中，可升阳举陷、醒脑开窍\n• **太阳穴** — 额部两侧凹陷处，疏风止痛\n• **风池穴** — 颈后发际两侧，祛风解表\n\n**建议方法：** 艾灸百会穴15-20分钟，配合按揉太阳穴和风池穴各3分钟。每日1次，连续5-7天可见效。',
@@ -160,21 +150,18 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  const activeIdRef = useRef(null);  // 同步追踪当前活跃对话ID（解决闭包陈旧值问题）
+  const activeIdRef = useRef(null);
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
 
-  // 同步 activeIdRef，保证 setTimeout/异步逻辑能拿到最新的 id
   useEffect(() => {
     activeIdRef.current = activeConversationId;
   }, [activeConversationId]);
 
-  // 滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConversation?.messages]);
 
-  // 开启新对话
   const handleNewConversation = () => {
     setActiveConversationId(null);
     activeIdRef.current = null;
@@ -182,7 +169,6 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  // 删除对话
   const handleDeleteConversation = (id, e) => {
     e.stopPropagation();
     setConversations(prev => prev.filter(c => c.id !== id));
@@ -193,22 +179,18 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
     message.success('对话已删除');
   };
 
-  // 选择对话
   const handleSelectConversation = (id) => {
     setActiveConversationId(id);
     activeIdRef.current = id;
   };
 
-  // 点击穴位链接 - 跳转到3D穴位模块
   const handleAcupointClick = (acupoint) => {
     message.info(`正在跳转到3D穴位视图，定位：${acupoint.name}（${acupoint.code}）`);
-    // 通过回调通知父组件跳转
     if (onNavigateToVisualization) {
       onNavigateToVisualization(acupoint);
     }
   };
 
-  // 获取AI回答 - 返回包含图谱信息的完整响应
   const getAIResponse = (userInput) => {
     for (const [keyword, answer] of Object.entries(aiAnswers)) {
       if (keyword !== 'default' && userInput.includes(keyword)) {
@@ -218,9 +200,9 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
     return aiAnswers['default'];
   };
 
-  // 发送消息
-  const handleSend = () => {
-    const text = inputValue.trim();
+  // 发送消息（可直接传入文本）
+  const handleSend = (overrideText) => {
+    const text = (overrideText || inputValue).trim();
     if (!text) return;
 
     const now = new Date().toLocaleString('zh-CN', {
@@ -228,18 +210,15 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     }).replace(/\//g, '-');
 
-    // 捕获当前或即将创建的对话ID，避免闭包陈旧值问题
     let targetId = activeIdRef.current;
 
     if (targetId) {
-      // 追加到当前对话
       setConversations(prev => prev.map(c =>
         c.id === targetId
           ? { ...c, messages: [...c.messages, { role: 'user', content: text, time: now }] }
           : c
       ));
     } else {
-      // 创建新对话：立即生成ID并同步写入 ref
       const newId = Date.now();
       targetId = newId;
       activeIdRef.current = newId;
@@ -256,7 +235,6 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
     setInputValue('');
     setIsTyping(true);
 
-    // 模拟AI回复延迟 —— 使用已捕获的 targetId，保证正确匹配对话
     setTimeout(() => {
       const aiResponse = getAIResponse(text);
       const aiTime = new Date().toLocaleString('zh-CN', {
@@ -287,9 +265,161 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
     }
   };
 
+  // 统一输入框组件 - 发送按钮在输入框内部右侧
+  const renderInputBox = (style = {}) => (
+    <Input
+      ref={inputRef}
+      value={inputValue}
+      onChange={e => setInputValue(e.target.value)}
+      onKeyDown={handleKeyDown}
+      placeholder="请输入您的中医针灸问题"
+      suffix={
+        <Button
+          type="primary"
+          icon={<SendOutlined />}
+          onClick={() => handleSend()}
+          disabled={!inputValue.trim() || isTyping}
+          style={{
+            borderRadius: 10,
+            minWidth: 32,
+            height: 32,
+            padding: '0 8px',
+            marginRight: -8,
+          }}
+        />
+      }
+      style={{
+        borderRadius: 22,
+        border: '1px solid #E5E8E3',
+        boxShadow: '0 2px 12px rgba(31,111,82,0.06)',
+        fontSize: 14,
+        padding: '10px 14px',
+        paddingRight: 48,
+        background: '#fff',
+        ...style,
+      }}
+    />
+  );
+
+  // 渲染消息中的知识图谱和溯源区域
+  const renderAISourceArea = (msg) => {
+    if (msg.role !== 'ai') return null;
+    return (
+      <>
+        {msg.graphNodes && msg.graphNodes.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <Divider style={{ margin: '8px 0', borderColor: '#D5D8D3' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <ApartmentOutlined style={{ color: '#1F6F52', fontSize: 14 }} />
+              <span style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600 }}>知识图谱绘制</span>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {msg.graphNodes.map((node, i) => (
+                <Tag
+                  key={i}
+                  style={{
+                    cursor: 'pointer',
+                    borderRadius: 16,
+                    background: '#F2F7F3',
+                    color: '#1F6F52',
+                    border: '1px solid #D5D8D3',
+                    fontSize: 12,
+                    padding: '4px 10px'
+                  }}
+                  onClick={() => {
+                    const acupoint = acupointNameMap[node];
+                    if (acupoint && onNavigateToKnowledgeGraph) {
+                      onNavigateToKnowledgeGraph(acupoint.code, msg.graphType || 'meridian');
+                    }
+                  }}
+                >
+                  <ApartmentOutlined style={{ marginRight: 4, fontSize: 10 }} />
+                  {node}
+                </Tag>
+              ))}
+              <Tag
+                style={{
+                  cursor: 'pointer',
+                  borderRadius: 16,
+                  background: '#1F6F52',
+                  color: '#fff',
+                  border: 'none',
+                  fontSize: 12,
+                  padding: '4px 10px'
+                }}
+                onClick={() => {
+                  if (onNavigateToKnowledgeGraph) {
+                    onNavigateToKnowledgeGraph(null, msg.graphType || 'meridian');
+                  }
+                }}
+              >
+                <LinkOutlined style={{ marginRight: 4, fontSize: 10 }} />
+                查看完整图谱
+              </Tag>
+            </div>
+          </div>
+        )}
+        {msg.sources && msg.sources.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <Divider style={{ margin: '8px 0', borderColor: '#D5D8D3' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <BookOutlined style={{ color: '#C58B54', fontSize: 14 }} />
+              <span style={{ fontSize: 12, color: '#C58B54', fontWeight: 600 }}>知识库溯源</span>
+            </div>
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              {msg.sources.map((source, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                    padding: '4px 8px',
+                    borderRadius: 8,
+                    background: '#FAFAF8',
+                    transition: 'all 0.2s'
+                  }}
+                  onClick={() => {
+                    if (source.type === 'meridian' && onNavigateToVisualization) {
+                      const acupoint = acupointNameMap[source.name];
+                      if (acupoint) onNavigateToVisualization(acupoint);
+                    } else if (source.type === 'compat' && onNavigateToKnowledgeGraph) {
+                      onNavigateToKnowledgeGraph(`compat-${source.id}`, 'compatibility');
+                    } else if (source.type === 'technique' && onNavigateToKnowledgeGraph) {
+                      onNavigateToKnowledgeGraph(source.code, 'technique');
+                    }
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F2F7F3'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#FAFAF8'; }}
+                >
+                  <MedicineBoxOutlined style={{ fontSize: 12, color: '#1F6F52' }} />
+                  <span style={{ fontSize: 12, color: '#1f2937' }}>{source.name}</span>
+                  <Tag style={{
+                    fontSize: 10,
+                    background: source.type === 'meridian' ? '#F2F7F3' :
+                               source.type === 'compat' ? '#FEF3E2' : '#E8F5E9',
+                    color: source.type === 'meridian' ? '#1F6F52' :
+                           source.type === 'compat' ? '#C58B54' : '#5BAF7D',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '0 6px'
+                  }}>
+                    {source.label}
+                  </Tag>
+                  <LinkOutlined style={{ fontSize: 10, color: '#8a8f89' }} />
+                </div>
+              ))}
+            </Space>
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 140px)', gap: 20, background: 'transparent' }}>
-      {/* 左侧边栏 - 对话历史 */}
+      {/* 左侧边栏 */}
       <div style={{
         width: 260,
         background: '#ffffff',
@@ -301,7 +431,6 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
         flexShrink: 0,
         overflow: 'hidden'
       }}>
-        {/* 新对话按钮 */}
         <div style={{ padding: 16, borderBottom: '1px solid #EEF0ED' }}>
           <Button
             type="primary"
@@ -314,7 +443,6 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
           </Button>
         </div>
 
-        {/* 对话列表 */}
         <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
           <div style={{ padding: '12px 16px 8px', fontSize: 12, color: '#8a8f89', fontWeight: 600, letterSpacing: '0.02em' }}>
             对话记录
@@ -338,33 +466,20 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
                   gap: 10
                 }}
                 onMouseEnter={e => {
-                  if (activeConversationId !== conv.id) {
-                    e.currentTarget.style.background = '#F2F4F2';
-                  }
+                  if (activeConversationId !== conv.id) e.currentTarget.style.background = '#F2F4F2';
                 }}
                 onMouseLeave={e => {
-                  if (activeConversationId !== conv.id) {
-                    e.currentTarget.style.background = 'transparent';
-                  }
+                  if (activeConversationId !== conv.id) e.currentTarget.style.background = 'transparent';
                 }}
               >
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: '#F2F7F3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#1F6F52', fontSize: 13 }}>
                   <MessageOutlined />
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{
-                    fontSize: 13,
-                    color: '#1f2937',
-                    fontWeight: 500,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
+                  <div style={{ fontSize: 13, color: '#1f2937', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {conv.title}
                   </div>
-                  <div style={{ fontSize: 11, color: '#8a8f89', marginTop: 2 }}>
-                    {conv.createTime}
-                  </div>
+                  <div style={{ fontSize: 11, color: '#8a8f89', marginTop: 2 }}>{conv.createTime}</div>
                 </div>
                 <Tooltip title="删除">
                   <DeleteOutlined
@@ -379,15 +494,7 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
           )}
         </div>
 
-        {/* 底部统计 */}
-        <div style={{
-          padding: 12,
-          borderTop: '1px solid #EEF0ED',
-          fontSize: 12,
-          color: '#8a8f89',
-          textAlign: 'center',
-          fontWeight: 500
-        }}>
+        <div style={{ padding: 12, borderTop: '1px solid #EEF0ED', fontSize: 12, color: '#8a8f89', textAlign: 'center', fontWeight: 500 }}>
           共 {conversations.length} 条对话
         </div>
       </div>
@@ -396,205 +503,65 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#ffffff', border: '1px solid #EEF0ED', borderRadius: 22, boxShadow: '0 1px 2px rgba(0,0,0,0.02), 0 8px 24px rgba(31, 111, 82, 0.04)' }}>
         {activeConversation ? (
           <>
-            {/* 对话消息区域 */}
+            {/* 消息区域 */}
             <div style={{ flex: 1, overflow: 'auto', padding: '32px 48px 32px 58px' }}>
               {activeConversation.messages.map((msg, index) => (
-                <div
-                  key={index}
-                  style={{
+                <div key={index}>
+                  <div style={{
                     display: 'flex',
                     gap: 12,
-                    marginBottom: 24,
+                    marginBottom: 4,
                     flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
                     alignItems: 'flex-start'
-                  }}
-                >
-                  <Avatar
-                    size={36}
-                    style={{
-                      background: '#F2F7F3',
-                      color: '#1F6F52',
-                      flexShrink: 0,
-                      fontWeight: 500
-                    }}
-                    icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                  />
-                  <div style={{
-                    maxWidth: '75%',
-                    background: msg.role === 'user' ? '#1F6F52' : '#F2F4F2',
-                    color: msg.role === 'user' ? '#ffffff' : '#1f2937',
-                    borderRadius: 18,
-                    padding: '12px 16px',
-                    fontSize: 14,
-                    lineHeight: 1.7,
-                    wordBreak: 'break-word',
-                    boxShadow: msg.role === 'user' ? '0 2px 8px rgba(31,111,82,0.18)' : 'none'
                   }}>
+                    <Avatar
+                      size={36}
+                      style={{ background: '#F2F7F3', color: '#1F6F52', flexShrink: 0, fontWeight: 500 }}
+                      icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
+                    />
                     <div style={{
-                      whiteSpace: 'pre-wrap',
+                      maxWidth: '75%',
+                      background: msg.role === 'user' ? '#1F6F52' : '#F2F4F2',
+                      color: msg.role === 'user' ? '#ffffff' : '#1f2937',
+                      borderRadius: 18,
+                      padding: '12px 16px',
+                      fontSize: 14,
+                      lineHeight: 1.7,
+                      wordBreak: 'break-word',
+                      boxShadow: msg.role === 'user' ? '0 2px 8px rgba(31,111,82,0.18)' : 'none'
                     }}>
-                      {msg.role === 'ai'
-                        ? renderContentWithAcupointLinks(msg.content, handleAcupointClick)
-                        : msg.content
-                      }
-                    </div>
-                    {/* 知识图谱绘制和知识库溯源 */}
-                    {msg.role === 'ai' && msg.graphNodes && msg.graphNodes.length > 0 && (
-                      <div style={{ marginTop: 12 }}>
-                        <Divider style={{ margin: '8px 0', borderColor: '#D5D8D3' }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <ApartmentOutlined style={{ color: '#1F6F52', fontSize: 14 }} />
-                          <span style={{ fontSize: 12, color: '#1F6F52', fontWeight: 600 }}>知识图谱绘制</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {msg.graphNodes.map((node, i) => (
-                            <Tag
-                              key={i}
-                              style={{
-                                cursor: 'pointer',
-                                borderRadius: 16,
-                                background: '#F2F7F3',
-                                color: '#1F6F52',
-                                border: '1px solid #D5D8D3',
-                                fontSize: 12,
-                                padding: '4px 10px'
-                              }}
-                              onClick={() => {
-                                const acupoint = acupointNameMap[node];
-                                if (acupoint && onNavigateToKnowledgeGraph) {
-                                  onNavigateToKnowledgeGraph(acupoint.code, msg.graphType || 'meridian');
-                                }
-                              }}
-                            >
-                              <ApartmentOutlined style={{ marginRight: 4, fontSize: 10 }} />
-                              {node}
-                            </Tag>
-                          ))}
-                          <Tag
-                            style={{
-                              cursor: 'pointer',
-                              borderRadius: 16,
-                              background: '#1F6F52',
-                              color: '#fff',
-                              border: 'none',
-                              fontSize: 12,
-                              padding: '4px 10px'
-                            }}
-                            onClick={() => {
-                              if (onNavigateToKnowledgeGraph) {
-                                onNavigateToKnowledgeGraph(null, msg.graphType || 'meridian');
-                              }
-                            }}
-                          >
-                            <LinkOutlined style={{ marginRight: 4, fontSize: 10 }} />
-                            查看完整图谱
-                          </Tag>
-                        </div>
+                      <div style={{ whiteSpace: 'pre-wrap' }}>
+                        {msg.role === 'ai'
+                          ? renderContentWithAcupointLinks(msg.content, handleAcupointClick)
+                          : msg.content
+                        }
                       </div>
-                    )}
-                    {/* 知识库溯源 */}
-                    {msg.role === 'ai' && msg.sources && msg.sources.length > 0 && (
-                      <div style={{ marginTop: 12 }}>
-                        <Divider style={{ margin: '8px 0', borderColor: '#D5D8D3' }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <BookOutlined style={{ color: '#C58B54', fontSize: 14 }} />
-                          <span style={{ fontSize: 12, color: '#C58B54', fontWeight: 600 }}>知识库溯源</span>
-                        </div>
-                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                          {msg.sources.map((source, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                cursor: 'pointer',
-                                padding: '4px 8px',
-                                borderRadius: 8,
-                                background: '#FAFAF8',
-                                transition: 'all 0.2s'
-                              }}
-                              onClick={() => {
-                                if (source.type === 'meridian' && onNavigateToVisualization) {
-                                  const acupoint = acupointNameMap[source.name];
-                                  if (acupoint) {
-                                    onNavigateToVisualization(acupoint);
-                                  }
-                                } else if (source.type === 'compat' && onNavigateToKnowledgeGraph) {
-                                  onNavigateToKnowledgeGraph(`compat-${source.id}`, 'compatibility');
-                                } else if (source.type === 'technique' && onNavigateToKnowledgeGraph) {
-                                  onNavigateToKnowledgeGraph(source.code, 'technique');
-                                }
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#F2F7F3';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = '#FAFAF8';
-                              }}
-                            >
-                              <MedicineBoxOutlined style={{ fontSize: 12, color: '#1F6F52' }} />
-                              <span style={{ fontSize: 12, color: '#1f2937' }}>{source.name}</span>
-                              <Tag style={{
-                                fontSize: 10,
-                                background: source.type === 'meridian' ? '#F2F7F3' :
-                                           source.type === 'compat' ? '#FEF3E2' : '#E8F5E9',
-                                color: source.type === 'meridian' ? '#1F6F52' :
-                                       source.type === 'compat' ? '#C58B54' : '#5BAF7D',
-                                border: 'none',
-                                borderRadius: 8,
-                                padding: '0 6px'
-                              }}>
-                                {source.label}
-                              </Tag>
-                              <LinkOutlined style={{ fontSize: 10, color: '#8a8f89' }} />
-                            </div>
-                          ))}
-                        </Space>
-                      </div>
-                    )}
-                    <div style={{
-                      fontSize: 11,
-                      color: msg.role === 'user' ? 'rgba(255,255,255,0.65)' : '#8a8f89',
-                      marginTop: 6,
-                      textAlign: msg.role === 'user' ? 'right' : 'left'
-                    }}>
-                      {msg.time}
+                      {renderAISourceArea(msg)}
                     </div>
+                  </div>
+                  {/* 时间放在气泡下方 */}
+                  <div style={{
+                    fontSize: 11,
+                    color: '#8a8f89',
+                    marginTop: 2,
+                    marginBottom: 20,
+                    textAlign: msg.role === 'user' ? 'right' : 'left',
+                    paddingLeft: msg.role === 'user' ? 0 : 48,
+                    paddingRight: msg.role === 'user' ? 48 : 0,
+                  }}>
+                    {msg.time}
                   </div>
                 </div>
               ))}
 
-              {/* AI正在输入 */}
               {isTyping && (
                 <div style={{ display: 'flex', gap: 12, marginBottom: 24, alignItems: 'flex-start' }}>
-                  <Avatar
-                    size={36}
-                    style={{
-                      background: '#F2F7F3',
-                      color: '#1F6F52',
-                      flexShrink: 0
-                    }}
-                    icon={<RobotOutlined />}
-                  />
-                  <div style={{
-                    background: '#F2F4F2',
-                    borderRadius: 18,
-                    padding: '12px 16px'
-                  }}>
+                  <Avatar size={36} style={{ background: '#F2F7F3', color: '#1F6F52', flexShrink: 0 }} icon={<RobotOutlined />} />
+                  <div style={{ background: '#F2F4F2', borderRadius: 18, padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      <div style={{
-                        width: 7, height: 7, borderRadius: '50%', background: '#1F6F52',
-                        animation: 'pulse 1.4s infinite ease-in-out'
-                      }} />
-                      <div style={{
-                        width: 7, height: 7, borderRadius: '50%', background: '#1F6F52',
-                        animation: 'pulse 1.4s infinite ease-in-out 0.2s'
-                      }} />
-                      <div style={{
-                        width: 7, height: 7, borderRadius: '50%', background: '#1F6F52',
-                        animation: 'pulse 1.4s infinite ease-in-out 0.4s'
-                      }} />
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#1F6F52', animation: 'pulse 1.4s infinite ease-in-out' }} />
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#1F6F52', animation: 'pulse 1.4s infinite ease-in-out 0.2s' }} />
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#1F6F52', animation: 'pulse 1.4s infinite ease-in-out 0.4s' }} />
                     </div>
                   </div>
                 </div>
@@ -604,51 +571,8 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
             </div>
 
             {/* 底部输入区域 */}
-            <div style={{
-              padding: '16px 24px 24px',
-              background: 'white',
-              borderTop: '1px solid #EEF0ED'
-            }}>
-              <div style={{
-                background: '#F2F4F2',
-                borderRadius: 20,
-                border: '1px solid #E5E8E3',
-                overflow: 'hidden'
-              }}>
-                {/* 输入框 */}
-                <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-                  <TextArea
-                    ref={inputRef}
-                    value={inputValue}
-                    onChange={e => setInputValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="请输入您的中医针灸问题"
-                    autoSize={{ minRows: 1, maxRows: 4 }}
-                    style={{
-                      border: 'none',
-                      boxShadow: 'none',
-                      resize: 'none',
-                      fontSize: 14,
-                      background: 'transparent',
-                      flex: 1,
-                      padding: 6,
-                      lineHeight: 1.6
-                    }}
-                  />
-                  <Button
-                    type="primary"
-                    icon={<SendOutlined />}
-                    onClick={handleSend}
-                    disabled={!inputValue.trim() || isTyping}
-                    style={{
-                      borderRadius: 14,
-                      width: 40,
-                      height: 40,
-                      flexShrink: 0
-                    }}
-                  />
-                </div>
-              </div>
+            <div style={{ padding: '12px 24px 20px' }}>
+              {renderInputBox({ boxShadow: '0 -2px 12px rgba(31,111,82,0.04)' })}
               <div style={{ fontSize: 11, color: '#8a8f89', marginTop: 8, textAlign: 'center' }}>
                 按 Enter 发送 · Shift + Enter 换行 · 内容由 AI 生成，仅供参考
               </div>
@@ -665,49 +589,30 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
             padding: 48,
             background: 'radial-gradient(ellipse at top, #F2F7F3 0%, #FAFAF8 70%)'
           }}>
-            {/* Logo区域 */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 20,
-              marginBottom: 24
-            }}>
-              <div
-                style={{
-                  width: 88,
-                  height: 88,
-                  background: 'linear-gradient(135deg, #1F6F52 0%, #2D8A6A 100%)',
-                  borderRadius: 28,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 12px 40px rgba(31,111,82,0.25)'
-                }}
-              >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
+              <div style={{
+                width: 88,
+                height: 88,
+                background: 'linear-gradient(135deg, #1F6F52 0%, #2D8A6A 100%)',
+                borderRadius: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 12px 40px rgba(31,111,82,0.25)'
+              }}>
                 <RobotOutlined style={{ fontSize: 42, color: 'white' }} />
               </div>
               <div style={{ textAlign: 'left' }}>
-                <h1 style={{
-                  fontSize: 34,
-                  fontWeight: 700,
-                  color: '#1f2937',
-                  margin: 0,
-                  letterSpacing: '-0.02em'
-                }}>
+                <h1 style={{ fontSize: 34, fontWeight: 700, color: '#1f2937', margin: 0, letterSpacing: '-0.02em' }}>
                   您的中医针灸 AI 顾问
                 </h1>
-                <p style={{
-                  fontSize: 15,
-                  color: '#8a8f89',
-                  margin: '10px 0 0',
-                  letterSpacing: '-0.01em'
-                }}>
+                <p style={{ fontSize: 15, color: '#8a8f89', margin: '10px 0 0', letterSpacing: '-0.01em' }}>
                   穴位查询 · 病症分析 · 针灸方案 · 养生建议
                 </p>
               </div>
             </div>
 
-            {/* 快捷提问 */}
+            {/* 快捷提问 - 直接发起问答 */}
             <div style={{ marginTop: 24, width: '100%', maxWidth: 620 }}>
               <div style={{ fontSize: 12, color: '#8a8f89', marginBottom: 12, textAlign: 'center', fontWeight: 500, letterSpacing: '0.05em' }}>
                 试试这样问
@@ -726,10 +631,7 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
                       border: 'none',
                       fontWeight: 500
                     }}
-                    onClick={() => {
-                      setInputValue(q);
-                      setTimeout(() => inputRef.current?.focus(), 100);
-                    }}
+                    onClick={() => handleSend(q)}
                   >
                     {q}
                   </Tag>
@@ -738,48 +640,8 @@ const QASystem = ({ onNavigateToVisualization, onNavigateToKnowledgeGraph }) => 
             </div>
 
             {/* 底部输入框 */}
-            <div style={{
-              width: '100%',
-              maxWidth: 620,
-              marginTop: 24,
-              background: '#ffffff',
-              borderRadius: 22,
-              border: '1px solid #E5E8E3',
-              boxShadow: '0 8px 32px rgba(31,111,82,0.08)',
-              overflow: 'hidden'
-            }}>
-              <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-                <TextArea
-                  ref={inputRef}
-                  value={inputValue}
-                  onChange={e => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="请输入您的中医针灸问题"
-                  autoSize={{ minRows: 1, maxRows: 4 }}
-                  style={{
-                    border: 'none',
-                    boxShadow: 'none',
-                    resize: 'none',
-                    fontSize: 14,
-                    background: 'transparent',
-                    flex: 1,
-                    padding: 6,
-                    lineHeight: 1.6
-                  }}
-                />
-                <Button
-                  type="primary"
-                  icon={<SendOutlined />}
-                  onClick={handleSend}
-                  disabled={!inputValue.trim()}
-                  style={{
-                    borderRadius: 14,
-                    width: 40,
-                    height: 40,
-                    flexShrink: 0
-                  }}
-                />
-              </div>
+            <div style={{ width: '100%', maxWidth: 620, marginTop: 24 }}>
+              {renderInputBox({ maxWidth: '100%' })}
             </div>
           </div>
         )}
