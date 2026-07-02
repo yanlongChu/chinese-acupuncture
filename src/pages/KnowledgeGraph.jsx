@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as d3 from 'd3';
 import {
   Card,
@@ -189,15 +189,26 @@ const KnowledgeGraph = ({ highlightNode, defaultTab }) => {
     };
   }, [activeTab, selectedCategory]);
 
-  const config = getGraphConfig();
+  // 用 useMemo 缓存 config，避免每次渲染都创建新对象导致 useEffect 重复执行
+  const config = useMemo(() => getGraphConfig(), [activeTab, selectedCategory]);
 
   // 绘制力导向图
   useEffect(() => {
     if (!svgRef.current || !containerRef.current) return;
 
-    const container = containerRef.current;
-    const width = container.clientWidth;
-    const height = container.clientHeight || 450;
+    // 使用 requestAnimationFrame 确保在布局完成后获取正确的容器尺寸
+    const drawGraph = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const width = container.clientWidth;
+      const height = container.clientHeight || 450;
+
+      // 如果尺寸为0，等待下次重绘
+      if (width === 0 || height === 0) {
+        requestAnimationFrame(drawGraph);
+        return;
+      }
 
     d3.select(svgRef.current).selectAll('*').remove();
 
@@ -215,6 +226,7 @@ const KnowledgeGraph = ({ highlightNode, defaultTab }) => {
 
     const zoom = d3.zoom()
       .scaleExtent([0.2, 4])
+      .wheelDelta((event) => -event.deltaY * 0.001) // 减小滚轮缩放步长，每次滚轮只缩放少量
       .filter((event) => {
         return event.type === 'wheel' || event.type === 'mousedown' || event.type === 'touchstart';
       })
@@ -405,7 +417,9 @@ const KnowledgeGraph = ({ highlightNode, defaultTab }) => {
       nodeGroups.attr('transform', d => `translate(${d.x},${d.y})`);
     });
 
+    // 初始化缩放到默认视图
     svg.call(zoom.transform, d3.zoomIdentity);
+    setZoomLevel(1);
 
     // 处理高亮节点
     if (highlightNode) {
@@ -425,7 +439,16 @@ const KnowledgeGraph = ({ highlightNode, defaultTab }) => {
       }
     }
 
-    return () => { simulation.stop(); };
+      // 返回清理函数
+      return () => { simulation.stop(); };
+    };
+
+    // 立即调用或等待布局完成
+    const rafId = requestAnimationFrame(drawGraph);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
   }, [activeTab, config, highlightNode]);
 
   // 切换 Tab 时重置为第一个分类
@@ -439,14 +462,26 @@ const KnowledgeGraph = ({ highlightNode, defaultTab }) => {
   }, [defaultTab]);
 
   const handleZoom = useCallback((delta) => {
-    if (!svgRef.current || !zoomRef.current) return;
+    if (!svgRef.current || !zoomRef.current || !containerRef.current) return;
     const svg = d3.select(svgRef.current);
     const zoom = zoomRef.current;
+    const container = containerRef.current;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    // 以 SVG 中心为基准进行缩放
     const currentTransform = d3.zoomTransform(svg.node());
     const newScale = Math.max(0.2, Math.min(4, currentTransform.k + delta));
+
+    // 计算新的 translate，使缩放以中心为基准
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const newTranslateX = centerX - (centerX - currentTransform.x) * (newScale / currentTransform.k);
+    const newTranslateY = centerY - (centerY - currentTransform.y) * (newScale / currentTransform.k);
+
     svg.transition().duration(200).call(
       zoom.transform,
-      d3.zoomIdentity.translate(currentTransform.x, currentTransform.y).scale(newScale)
+      d3.zoomIdentity.translate(newTranslateX, newTranslateY).scale(newScale)
     );
     setZoomLevel(newScale);
   }, []);
